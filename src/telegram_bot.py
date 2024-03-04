@@ -82,6 +82,7 @@ async def listen_for_messages(update: Update, context: ContextTypes.DEFAULT_TYPE
 
 
 def _store_messages(message):
+    # TODO: Add logic to store the message in the correct queue
     message_storage.append(message)
 
 
