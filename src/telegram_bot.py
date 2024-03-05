@@ -9,7 +9,10 @@ from telegram.ext import ApplicationBuilder, ContextTypes, CommandHandler, filte
 load_dotenv()
 
 DEFAULT_MESSAGE_STORAGE = 5
-message_storage = deque([], DEFAULT_MESSAGE_STORAGE)
+
+# We're using a dictionary to store the chats id as the key,
+# and the messages in a queue as the value for the time being.
+message_storage = {}
 
 logging.basicConfig(
     format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
@@ -22,21 +25,25 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
 
 async def summarize(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    """
+    Command that summarizes the last N messages
+    @param update:
+    @param context:
+    @return:
+    """
     # Making assumption that the 1st argument is the number
     number_of_messages = await determine_number_of_messages(context)
 
-    # Read last N messages of the group
-    messages = get_last_n_group_messages(number_of_messages, message_storage)
-
-    # Send N messages to OpenAI
-    summarized_msg = summarize_messages(messages)
-
-    if summarized_msg:
-        # Send the result as a message
-        await context.bot.send_message(chat_id=update.effective_chat.id, text=summarized_msg)
-    else:
+    if update.effective_chat.id not in message_storage:
         empty_message_notice = "There are no messages to summarize"
         await context.bot.send_message(chat_id=update.effective_chat.id, text=empty_message_notice)
+    else:
+        message_storage_queue = message_storage[update.effective_chat.id]
+        messages = get_last_n_group_messages(number_of_messages, message_storage_queue)
+
+        # Send N messages to OpenAI
+        summarized_msg = summarize_messages(messages)
+        await context.bot.send_message(chat_id=update.effective_chat.id, text=summarized_msg)
 
 
 async def determine_number_of_messages(context):
@@ -67,9 +74,15 @@ async def replay_messages_in_storage(update: Update, context: ContextTypes.DEFAU
     # Command that replays the messages in storage
     @rtype: object
     """
-    logging.debug(f'Currently in storage: {message_storage}')
-    for message in message_storage:
-        await context.bot.send_message(chat_id=update.effective_chat.id, text=message)
+    if update.effective_chat.id not in message_storage:
+        await context.bot.send_message(chat_id=update.effective_chat.id, text="There are no message to replay")
+
+    else:
+        message_storage_queue = message_storage[update.effective_chat.id]
+        logging.debug(f'Replaying for chat id {update.effective_chat.id} currently in storage.')
+
+        for message in message_storage_queue:
+            await context.bot.send_message(chat_id=update.effective_chat.id, text=message)
 
 
 async def listen_for_messages(update: Update, context: ContextTypes.DEFAULT_TYPE):
@@ -77,12 +90,19 @@ async def listen_for_messages(update: Update, context: ContextTypes.DEFAULT_TYPE
     # Command that listens for messages and stores them.
     @rtype: object
     """
-    logging.info(f'got message: {update.message.text}')
-    _store_messages(update.message.text)
+    logging.info(f'Got message: {update.message.text} from chat id: {update.effective_chat.id}')
+    _store_messages(update.message.text, update.effective_chat.id)
 
 
-def _store_messages(message):
-    message_storage.append(message)
+def _store_messages(message: str, chat_id: int):
+    if chat_id not in message_storage:
+        message_storage[chat_id] = deque([], DEFAULT_MESSAGE_STORAGE)
+
+    message_queue = message_storage[chat_id]
+    logging.debug(f"Storing message {message} from chat id: {chat_id}")
+    message_queue.append(message)
+
+    return len(message_queue)
 
 
 if __name__ == '__main__':
