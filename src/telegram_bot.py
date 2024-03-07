@@ -1,10 +1,13 @@
 import logging
 import os
 from collections import deque
+from typing import Sequence
 
 from dotenv import load_dotenv
 from telegram import Update
 from telegram.ext import ApplicationBuilder, ContextTypes, CommandHandler, filters, MessageHandler
+
+from data_classes import Message
 
 load_dotenv()
 
@@ -63,9 +66,10 @@ def get_last_n_group_messages(number_of_messages: int, message_queue=None):
     return list_of_strings[-number_of_messages:]
 
 
-def summarize_messages(messages):
+def summarize_messages(messages: Sequence[Message]):
     # TODO: Figure out how to use OpenAI API
-    summary = ','.join(messages)
+    messages_content = [msg.content for msg in messages]
+    summary = ','.join(messages_content)
     return summary
 
 
@@ -82,7 +86,7 @@ async def replay_messages_in_storage(update: Update, context: ContextTypes.DEFAU
         logging.debug(f'Replaying for chat id {update.effective_chat.id} currently in storage.')
 
         for message in message_storage_queue:
-            await context.bot.send_message(chat_id=update.effective_chat.id, text=message)
+            await context.bot.send_message(chat_id=update.effective_chat.id, text=message.content)
 
 
 async def listen_for_messages(update: Update, context: ContextTypes.DEFAULT_TYPE):
@@ -90,11 +94,20 @@ async def listen_for_messages(update: Update, context: ContextTypes.DEFAULT_TYPE
     # Command that listens for messages and stores them.
     @rtype: object
     """
-    logging.info(f'Got message: {update.message.text} from chat id: {update.effective_chat.id}')
-    _store_messages(update.message.text, update.effective_chat.id)
+    message_owner = Message.convert_update_to_owner(update)
+    message = Message(
+        message_id=update.message.id,
+        owner_id=update.message.from_user.id,
+        content=update.message.text,
+        owner_name=message_owner,
+        created_at=update.message.date
+    )
+    logging.info(f'Got message: {message} from chat id: {update.effective_chat.id}')
+
+    _store_messages(message, update.effective_chat.id)
 
 
-def _store_messages(message: str, chat_id: int):
+def _store_messages(message: Message, chat_id: int):
     if chat_id not in message_storage:
         message_storage[chat_id] = deque([], DEFAULT_MESSAGE_STORAGE)
 
