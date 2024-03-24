@@ -8,10 +8,11 @@ from telegram import Update
 from telegram.ext import ApplicationBuilder, ContextTypes, CommandHandler, filters, MessageHandler
 
 from data_classes import Message
+from openai_utils import get_ai_client, summarize_messages_using_ai
 
 load_dotenv()
 
-DEFAULT_MESSAGE_STORAGE = 5
+DEFAULT_MESSAGE_STORAGE = 100
 
 # We're using a dictionary to store the chats id as the key,
 # and the messages in a queue as the value for the time being.
@@ -21,6 +22,8 @@ logging.basicConfig(
     format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
     level=logging.INFO
 )
+
+logger = logging.getLogger(__name__)
 
 
 async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
@@ -66,10 +69,15 @@ def get_last_n_group_messages(number_of_messages: int, message_queue=None):
     return list_of_strings[-number_of_messages:]
 
 
-def summarize_messages(messages: Sequence[Message]):
-    # TODO: Figure out how to use OpenAI API
-    messages_content = [msg.content for msg in messages]
-    summary = ','.join(messages_content)
+def summarize_messages(messages: Sequence[Message]) -> str:
+
+    messages_content = [f"{msg.owner_name}: {msg.content}" for msg in messages]
+    prompt_message_schema = ';'.join(messages_content)
+
+    client = get_ai_client()
+    summary = summarize_messages_using_ai(client, prompt_message_schema)
+    logger.info(summary)
+
     return summary
 
 
@@ -83,7 +91,7 @@ async def replay_messages_in_storage(update: Update, context: ContextTypes.DEFAU
 
     else:
         message_storage_queue = message_storage[update.effective_chat.id]
-        logging.debug(f'Replaying for chat id {update.effective_chat.id} currently in storage.')
+        logger.debug(f'Replaying for chat id {update.effective_chat.id} currently in storage.')
 
         for message in message_storage_queue:
             await context.bot.send_message(chat_id=update.effective_chat.id, text=message.content)
@@ -102,7 +110,7 @@ async def listen_for_messages(update: Update, context: ContextTypes.DEFAULT_TYPE
         owner_name=message_owner,
         created_at=update.message.date
     )
-    logging.info(f'Got message: {message} from chat id: {update.effective_chat.id}')
+    logger.info(f'Got message: {message} from chat id: {update.effective_chat.id}')
 
     _store_messages(message, update.effective_chat.id)
 
@@ -112,7 +120,7 @@ def _store_messages(message: Message, chat_id: int):
         message_storage[chat_id] = deque([], DEFAULT_MESSAGE_STORAGE)
 
     message_queue = message_storage[chat_id]
-    logging.debug(f"Storing message {message} from chat id: {chat_id}")
+    logger.debug(f"Storing message {message} from chat id: {chat_id}")
     message_queue.append(message)
 
     return len(message_queue)
