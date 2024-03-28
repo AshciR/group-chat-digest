@@ -13,9 +13,5 @@ RUN pip install --no-cache-dir -r requirements.txt
 # Make port 80 available to the world outside this container
 EXPOSE 80
 
-# Define environment variable
-ENV TELEGRAM_API_KEY=$TELEGRAM_API_KEY
-ENV OPENAI_API_KEY=$OPENAI_API_KEY
-
 # Run app.py when the container launches
 CMD ["python", "src/telegram_bot.py"]
