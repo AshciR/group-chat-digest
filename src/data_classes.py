@@ -11,7 +11,7 @@ class Message:
     content: str
     owner_id: int
     owner_name: str
-    created_at: datetime.datetime
+    #created_at: datetime.datetime
 
     @staticmethod
     def convert_update_to_owner(update: Update):

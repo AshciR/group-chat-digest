@@ -1,5 +1,7 @@
+import json
 import logging
 import os
+import redis
 from collections import deque
 from typing import Sequence
 
@@ -10,12 +12,15 @@ from telegram.ext import ApplicationBuilder, ContextTypes, CommandHandler, filte
 from data_classes import Message
 from openai_utils import get_ai_client, summarize_messages_using_ai
 
+
 load_dotenv()
 
 DEFAULT_MESSAGE_STORAGE = 100
 
 # We're using a dictionary to store the chats id as the key,
 # and the messages in a queue as the value for the time being.
+r = redis.Redis(host='localhost', port=6379, db=0)
+
 message_storage = {}
 
 logging.basicConfig(
@@ -51,6 +56,38 @@ async def summarize(update: Update, context: ContextTypes.DEFAULT_TYPE):
         summarized_msg = summarize_messages(messages)
         await context.bot.send_message(chat_id=update.effective_chat.id, text=summarized_msg)
 
+async def summarize_with_cache(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    """
+    Command that summarizes the last N messages
+    @param update:
+    @param context:
+    @return:
+    """
+    # Making assumption that the 1st argument is the number
+    number_of_messages = await determine_number_of_messages(context)
+
+    if not r.exists(update.effective_chat.id):
+        empty_message_notice = "There are no messages to summarize"
+        await context.bot.send_message(chat_id=update.effective_chat.id, text=empty_message_notice)
+    else:
+        message_storage_queue = r.get(str(update.effective_chat.id))
+        deserialize_queue = deserialize_message_list(message_storage_queue)
+
+        print(deserialize_queue)
+        print(deserialize_queue[0])
+        messages = get_last_n_group_messages(number_of_messages, deserialize_queue)
+
+        # Send N messages to OpenAI
+        summarized_msg = summarize_messages(messages)
+        await context.bot.send_message(chat_id=update.effective_chat.id, text=summarized_msg)
+
+def deserialize_message_list(message_list):
+
+    deserialize_messages = []
+    for message in message_list:
+        deserialize_messages.append(Message(**json.loads(message.decode('utf-8'))))
+        
+    return deserialize_messages
 
 async def determine_number_of_messages(context):
     if context.args and context.args[0].isdigit():
@@ -96,6 +133,22 @@ async def replay_messages_in_storage(update: Update, context: ContextTypes.DEFAU
         for message in message_storage_queue:
             await context.bot.send_message(chat_id=update.effective_chat.id, text=message.content)
 
+async def replay_messages_in_cache(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    """
+    # Command that replays the messages in storage
+    @rtype: object
+    """
+    if not r.exists(update.effective_chat.id):
+        await context.bot.send_message(chat_id=update.effective_chat.id, text="There are no message to replay")
+
+    else:
+        message_storage_queue = r.get(str(update.effective_chat.id))
+        logger.debug(f'Replaying for chat id {update.effective_chat.id} currently in storage.')
+
+        for message in message_storage_queue:
+            deserialized_message = Message(**json.loads(message.decode('utf-8')))
+            await context.bot.send_message(chat_id=update.effective_chat.id, text=deserialized_message.content)
+
 
 async def listen_for_messages(update: Update, context: ContextTypes.DEFAULT_TYPE):
     """
@@ -108,11 +161,12 @@ async def listen_for_messages(update: Update, context: ContextTypes.DEFAULT_TYPE
         owner_id=update.message.from_user.id,
         content=update.message.text,
         owner_name=message_owner,
-        created_at=update.message.date
+        #created_at=update.message.date
     )
     logger.info(f'Got message: {message} from chat id: {update.effective_chat.id}')
 
-    _store_messages(message, update.effective_chat.id)
+    count = _store_messages_in_cache(message, update.effective_chat.id)
+    logger.info(f'Cache size: {count} from chat id: {update.effective_chat.id}')
 
 
 def _store_messages(message: Message, chat_id: int):
@@ -125,6 +179,11 @@ def _store_messages(message: Message, chat_id: int):
 
     return len(message_queue)
 
+def _store_messages_in_cache(message: Message, chat_id: int):
+    
+    logger.debug(f"Storing message {message} from chat id: {chat_id}")
+    serialized_message = json.dumps(message.__dict__)
+    return r.lpush(str(chat_id),serialized_message)
 
 if __name__ == '__main__':
     telegram_token = os.getenv('TELEGRAM_API_KEY')
@@ -136,10 +195,10 @@ if __name__ == '__main__':
     start_handler = CommandHandler('start', start)
     application.add_handler(start_handler)
 
-    summarize_handler = CommandHandler('gist', summarize)
+    summarize_handler = CommandHandler('gist', summarize_with_cache)
     application.add_handler(summarize_handler)
 
-    spit_handler = CommandHandler('replay', replay_messages_in_storage)
+    spit_handler = CommandHandler('replay', replay_messages_in_cache)
     application.add_handler(spit_handler)
 
     listen_for_messages_handler = MessageHandler(filters.TEXT & (~filters.COMMAND), listen_for_messages)
