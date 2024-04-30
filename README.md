@@ -18,6 +18,5 @@ docker run
 <docker-image>
 ```
 
-
 ##  Redis image
-docker run -p 6379:6379 --name some-redii-2 -d redis:7.2.4-alpine
+`docker run -p 6379:6379 --name some-redis-2 -d redis:7.2.4-alpine`
