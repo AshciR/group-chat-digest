@@ -1,0 +1,29 @@
+version: '3.8'
+
+services:
+  app:
+    container_name: chat-nuff-bot
+    environment:
+      - REDIS_HOST=redis
+      - REDIS_PORT=6379
+      - REDIS_DB=0
+      - TELEGRAM_API_KEY=${TELEGRAM_API_KEY}
+      - OPENAI_API_KEY=${OPENAI_API_KEY}
+    build:
+      context: .
+      dockerfile: Dockerfile
+    ports:
+      - "80:80"
+    depends_on:
+      - redis
+
+  redis:
+    container_name: message-storage
+    image: redis:7.2.4-alpine
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis_data:/data
+
+volumes:
+  redis_data:

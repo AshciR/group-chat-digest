@@ -1,22 +1,16 @@
 import logging
 import os
-from collections import deque
 from typing import Sequence
 
 from dotenv import load_dotenv
 from telegram import Update
 from telegram.ext import ApplicationBuilder, ContextTypes, CommandHandler, filters, MessageHandler
 
-from data_classes import Message
+from message_storage import Message, get_redis_client, store_message, chat_exists, get_latest_n_messages, \
+    DEFAULT_MESSAGE_STORAGE
 from openai_utils import get_ai_client, summarize_messages_using_ai
 
 load_dotenv()
-
-DEFAULT_MESSAGE_STORAGE = 100
-
-# We're using a dictionary to store the chats id as the key,
-# and the messages in a queue as the value for the time being.
-message_storage = {}
 
 logging.basicConfig(
     format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
@@ -38,21 +32,26 @@ async def summarize(update: Update, context: ContextTypes.DEFAULT_TYPE):
     @return:
     """
     # Making assumption that the 1st argument is the number
-    number_of_messages = await determine_number_of_messages(context)
+    number_of_messages_to_summarize = await _determine_number_of_messages_from_message_context(context)
 
-    if update.effective_chat.id not in message_storage:
+    redis_client = get_redis_client()
+    chat_id = update.effective_chat.id
+
+    if not chat_exists(redis_client, chat_id):
         empty_message_notice = "There are no messages to summarize"
-        await context.bot.send_message(chat_id=update.effective_chat.id, text=empty_message_notice)
+        await context.bot.send_message(chat_id=chat_id, text=empty_message_notice)
     else:
-        message_storage_queue = message_storage[update.effective_chat.id]
-        messages = get_last_n_group_messages(number_of_messages, message_storage_queue)
+
+        messages = get_latest_n_messages(redis_client, chat_id, number_of_messages_to_summarize)
+        # We have to reverse the list b/c Redis stores the latest message in index 0
+        messages.reverse()
 
         # Send N messages to OpenAI
-        summarized_msg = summarize_messages(messages)
-        await context.bot.send_message(chat_id=update.effective_chat.id, text=summarized_msg)
+        summarized_msg = _summarize_messages(messages)
+        await context.bot.send_message(chat_id=chat_id, text=summarized_msg)
 
 
-async def determine_number_of_messages(context):
+async def _determine_number_of_messages_from_message_context(context):
     if context.args and context.args[0].isdigit():
         number_of_messages = int(context.args[0])
     else:
@@ -61,16 +60,7 @@ async def determine_number_of_messages(context):
     return number_of_messages
 
 
-def get_last_n_group_messages(number_of_messages: int, message_queue=None):
-    # Create a defensive copy as a good programming practice
-    list_of_strings = list(message_queue)
-
-    # Return the last n strings. If n is larger than the deque, return the whole list
-    return list_of_strings[-number_of_messages:]
-
-
-def summarize_messages(messages: Sequence[Message]) -> str:
-
+def _summarize_messages(messages: Sequence[Message]) -> str:
     messages_content = [f"{msg.owner_name}: {msg.content}" for msg in messages]
     prompt_message_schema = ';'.join(messages_content)
 
@@ -81,20 +71,23 @@ def summarize_messages(messages: Sequence[Message]) -> str:
     return summary
 
 
-async def replay_messages_in_storage(update: Update, context: ContextTypes.DEFAULT_TYPE):
+async def replay_messages(update: Update, context: ContextTypes.DEFAULT_TYPE):
     """
     # Command that replays the messages in storage
     @rtype: object
     """
-    if update.effective_chat.id not in message_storage:
-        await context.bot.send_message(chat_id=update.effective_chat.id, text="There are no message to replay")
+    redis_client = get_redis_client()
+    chat_id_key = update.effective_chat.id
+
+    if not chat_exists(redis_client, chat_id_key):
+        await context.bot.send_message(chat_id=chat_id_key, text="There are no message to replay")
 
     else:
-        message_storage_queue = message_storage[update.effective_chat.id]
-        logger.debug(f'Replaying for chat id {update.effective_chat.id} currently in storage.')
+        logger.debug(f'Replaying for chat id {chat_id_key} currently in storage.')
 
-        for message in message_storage_queue:
-            await context.bot.send_message(chat_id=update.effective_chat.id, text=message.content)
+        messages = get_latest_n_messages(redis_client, chat_id_key)
+        for message in messages[::-1]:
+            await context.bot.send_message(chat_id=chat_id_key, text=message.content)
 
 
 async def listen_for_messages(update: Update, context: ContextTypes.DEFAULT_TYPE):
@@ -108,22 +101,13 @@ async def listen_for_messages(update: Update, context: ContextTypes.DEFAULT_TYPE
         owner_id=update.message.from_user.id,
         content=update.message.text,
         owner_name=message_owner,
-        created_at=update.message.date
+        created_at=update.message.date.isoformat()
     )
     logger.info(f'Got message: {message} from chat id: {update.effective_chat.id}')
 
-    _store_messages(message, update.effective_chat.id)
-
-
-def _store_messages(message: Message, chat_id: int):
-    if chat_id not in message_storage:
-        message_storage[chat_id] = deque([], DEFAULT_MESSAGE_STORAGE)
-
-    message_queue = message_storage[chat_id]
-    logger.debug(f"Storing message {message} from chat id: {chat_id}")
-    message_queue.append(message)
-
-    return len(message_queue)
+    redis_client = get_redis_client()
+    count = store_message(redis_client, update.effective_chat.id, message)
+    logger.info(f'Cache size: {count} from chat id: {update.effective_chat.id}')
 
 
 if __name__ == '__main__':
@@ -139,7 +123,7 @@ if __name__ == '__main__':
     summarize_handler = CommandHandler('gist', summarize)
     application.add_handler(summarize_handler)
 
-    spit_handler = CommandHandler('replay', replay_messages_in_storage)
+    spit_handler = CommandHandler('replay', replay_messages)
     application.add_handler(spit_handler)
 
     listen_for_messages_handler = MessageHandler(filters.TEXT & (~filters.COMMAND), listen_for_messages)
