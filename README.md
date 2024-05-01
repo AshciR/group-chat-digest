@@ -9,7 +9,7 @@ docker build . -t <tag-the-image>
 ```
 
 ## How to run
-You can run the application as a docker container with the following.
+You can run the application as a docker containers with the following.
 ```shell
 docker run 
 -e TELEGRAM_API_KEY=<key> \ 
@@ -19,4 +19,4 @@ docker run
 ```
 
 ##  Redis image
-`docker run -p 6379:6379 --name some-redis-2 -d redis:7.2.4-alpine`
+`docker run -p 6379:6379 --name some-redis-1 -d redis:7.2.4-alpine`
