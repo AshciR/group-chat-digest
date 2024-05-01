@@ -27,5 +27,6 @@ dependencies = [
 virtual = true
 
 [tool.rye.scripts]
-dev = "docker-compose up -d --build"
+start-dev = "docker-compose up -d --build"
+stop-dev = "docker-compose down"
 
