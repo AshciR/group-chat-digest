@@ -1,18 +1,23 @@
-import datetime
 import json
 import logging
+import os
 from dataclasses import dataclass, asdict
 
 import redis
+from dotenv import load_dotenv
 from redis import Redis
 from telegram import Update
 
+load_dotenv()
 
 logger = logging.getLogger(__name__)
 
 DEFAULT_MESSAGE_STORAGE = 100
 
-redis_client_singleton = redis.Redis(host='localhost', port=6379, db=0)
+host = os.getenv('REDIS_HOST')
+port = os.getenv('REDIS_PORT')
+db = os.getenv('REDIS_DB')
+redis_client_singleton = redis.Redis(host=host, port=port, db=db)
 
 
 def get_redis_client() -> Redis:
@@ -30,8 +35,7 @@ class Message:
     content: str
     owner_id: int
     owner_name: str
-
-    # created_at: datetime.datetime
+    created_at: str
 
     @staticmethod
     def convert_update_to_owner(update: Update):

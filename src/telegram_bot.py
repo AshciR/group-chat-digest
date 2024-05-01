@@ -35,9 +35,9 @@ async def summarize(update: Update, context: ContextTypes.DEFAULT_TYPE):
     number_of_messages_to_summarize = await _determine_number_of_messages_from_message_context(context)
 
     redis_client = get_redis_client()
-
     chat_id = update.effective_chat.id
-    if chat_exists(redis_client, chat_id):
+
+    if not chat_exists(redis_client, chat_id):
         empty_message_notice = "There are no messages to summarize"
         await context.bot.send_message(chat_id=chat_id, text=empty_message_notice)
     else:
@@ -101,7 +101,7 @@ async def listen_for_messages(update: Update, context: ContextTypes.DEFAULT_TYPE
         owner_id=update.message.from_user.id,
         content=update.message.text,
         owner_name=message_owner,
-        # created_at=update.message.date
+        created_at=update.message.date.isoformat()
     )
     logger.info(f'Got message: {message} from chat id: {update.effective_chat.id}')
 
