@@ -23,10 +23,14 @@ dependencies = [
     "tqdm==4.66.2",
     "typing_extensions==4.9.0"
 ]
+
 [tool.rye]
 virtual = true
+dev-dependencies = [
+    "pytest==8.2.0"
+]
 
 [tool.rye.scripts]
-start-dev = "docker-compose up -d --build"
-stop-dev = "docker-compose down"
+dev = "docker-compose up -d --build"
+stop = "docker-compose down"
 

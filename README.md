@@ -19,6 +19,8 @@ After Rye is installed, you run the following:
 `rye sync`
 2. Run the application via a run script
 `rye run dev`
+3. Stop the application via a run script
+`rye run stop`
 
 ### B. Spinning Docker up manually
 You can run the application as a docker containers with the following.
