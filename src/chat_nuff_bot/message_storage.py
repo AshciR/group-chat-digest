@@ -20,14 +20,6 @@ db = os.getenv('REDIS_DB')
 redis_client_singleton = redis.Redis(host=host, port=port, db=db)
 
 
-def get_redis_client() -> Redis:
-    """
-    Gets the Redis client
-    @return: the Redis client
-    """
-    return redis_client_singleton
-
-
 @dataclass
 class Message:
     """Stores the content of the messages"""
@@ -40,6 +32,14 @@ class Message:
     @staticmethod
     def convert_update_to_owner(update: Update):
         return f"{update.message.from_user.first_name} {update.message.from_user.last_name}"
+
+
+def get_redis_client() -> Redis:
+    """
+    Gets the Redis client
+    @return: the Redis client
+    """
+    return redis_client_singleton
 
 
 def store_message(redis_client: Redis,
