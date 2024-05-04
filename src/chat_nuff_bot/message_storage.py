@@ -76,7 +76,8 @@ def chat_exists(redis_client: Redis,
     @param chat_id: The unique identifier for the chat session.
     @return: True if chat exists
     """
-    return redis_client.exists(str(chat_id))
+    exists = True if redis_client.exists(str(chat_id)) != 0 else False
+    return exists
 
 
 def get_latest_n_messages(
@@ -92,6 +93,11 @@ def get_latest_n_messages(
     @param number_of_msgs:
     @return:
     """
+
+    # Guard clause
+    if number_of_msgs <= 0:
+        return []
+
     serialized_messages = redis_client.lrange(str(chat_id), 0, number_of_msgs - 1)
     logger.info(f"Redis Messages: {serialized_messages}")
 

@@ -29,7 +29,8 @@ virtual = true
 dev-dependencies = [
     "pytest==8.2.0",
     "fakeredis==2.22.0",
-    "pytest-xdist==3.6.1"
+    "pytest-xdist==3.6.1",
+    "pytest-spec==3.2.0"
 ]
 
 [tool.pytest.ini_options]
@@ -39,5 +40,5 @@ pythonpath = ["src"]
 build-dev = "docker-compose up -d --build"
 dev = "docker-compose up -d"
 stop = "docker-compose down"
-tests = "pytest -n auto tests"
+tests = "pytest -n auto tests --spec"
 

@@ -1,10 +1,10 @@
 from datetime import datetime
-from typing import List, Tuple
 
 import pytest
 from fakeredis import FakeRedis
 
-from chat_nuff_bot.message_storage import Message, store_message, DEFAULT_MESSAGE_STORAGE
+from chat_nuff_bot.message_storage import Message, store_message, DEFAULT_MESSAGE_STORAGE, chat_exists, \
+    get_latest_n_messages
 
 
 def test_store_message(stub_redis_client):
@@ -82,6 +82,75 @@ def test_store_message_only_keeps_latest_messages(stub_redis_client):
 
     # Then: The chat should have maximum messages
     assert result == DEFAULT_MESSAGE_STORAGE
+
+
+def test_chat_exists(stub_redis_client):
+    # Given: We have a message for a chat
+    chat_id = -100
+    message_id = 150
+    content = f"Test message chat: {chat_id}, id: {message_id}"
+    message, _ = _create_test_message(stub_redis_client, chat_id, message_id, content=content)
+
+    # When: We check if the chat exists
+    exists = chat_exists(stub_redis_client, chat_id)
+
+    # Then: It should be true
+    assert exists
+
+
+def test_chat_does_not_exist(stub_redis_client):
+    # Given: The chat doesn't exist
+    non_existent_chat_id = -999
+
+    # When: We check if the chat exists
+    exists = chat_exists(stub_redis_client, non_existent_chat_id)
+
+    # Then: It should be False
+    assert not exists
+
+
+def test_get_latest_n_messages(stub_redis_client):
+    # Given: We have 10 messages
+    chat_id = -100
+    created_messages_and_count: list[tuple[Message, int]] = [
+        _create_test_message(stub_redis_client, chat_id, msg_id, content=f"Test message chat: {chat_id}, id: {msg_id}")
+        for msg_id in range(10)
+    ]
+
+    # When: We get 5 messages
+    latest_messages = get_latest_n_messages(stub_redis_client, chat_id, 5)
+
+    # Then: It should be the latest 5
+    # Last created message will be the 1st index
+    assert len(latest_messages) == 5
+    assert latest_messages[0].content == created_messages_and_count[-1][0].content
+
+
+def test_get_latest_n_messages_for_non_existent_chat(stub_redis_client):
+    # Given: The chat doesn't exist
+    non_existent_chat_id = -999
+
+    # When: We get 5 messages
+    latest_messages = get_latest_n_messages(stub_redis_client, non_existent_chat_id, 5)
+
+    # Then: It should be 0
+    assert len(latest_messages) == 0
+
+
+@pytest.mark.parametrize("num_of_msgs", [0, -1])
+def test_get_latest_n_messages_when_n_is_invalid(stub_redis_client, num_of_msgs):
+    # Given: We have 10 messages
+    chat_id = -100
+    created_messages_and_count: list[tuple[Message, int]] = [
+        _create_test_message(stub_redis_client, chat_id, msg_id, content=f"Test message chat: {chat_id}, id: {msg_id}")
+        for msg_id in range(10)
+    ]
+
+    # When: We get an invalid number of messages
+    latest_messages = get_latest_n_messages(stub_redis_client, chat_id, num_of_msgs)
+
+    # Then: It should be an empty list
+    assert len(latest_messages) == 0
 
 
 @pytest.fixture

@@ -50,7 +50,7 @@ Tests can be run 2 ways:
 This executes the Rye test script.
 
 ### B. Using Pytest directly
-`pytest -n auto tests`
+`pytest -n auto tests --spec`
 
 Runs Pytest in a parallel mode. Note: We create atom tests that facilitate this.
 Meaning, our practice is not writing tests that share state, or depending on
