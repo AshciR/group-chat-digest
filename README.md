@@ -19,6 +19,8 @@ After Rye is installed, you run the following:
 `rye sync`
 2. Run the application via a run script
 `rye run dev`
+3. Stop the application via a run script
+`rye run stop`
 
 ### B. Spinning Docker up manually
 You can run the application as a docker containers with the following.
@@ -37,6 +39,22 @@ Use the following command to build the image
 ```shell
 docker build . -t <tag-the-image>
 ```
+
+## Testing
+This project contains tests. We use Pytest for the testing framework.
+Tests can be run 2 ways:
+
+### A. Using Rye
+`rye run tests`
+
+This executes the Rye test script.
+
+### B. Using Pytest directly
+`pytest -n auto tests --spec`
+
+Runs Pytest in a parallel mode. Note: We create atom tests that facilitate this.
+Meaning, our practice is not writing tests that share state, or depending on
+the results from other tests.
 
 ## Notes
 The application requires a Redis cache to store messages.

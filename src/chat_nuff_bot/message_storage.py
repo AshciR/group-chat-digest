@@ -20,14 +20,6 @@ db = os.getenv('REDIS_DB')
 redis_client_singleton = redis.Redis(host=host, port=port, db=db)
 
 
-def get_redis_client() -> Redis:
-    """
-    Gets the Redis client
-    @return: the Redis client
-    """
-    return redis_client_singleton
-
-
 @dataclass
 class Message:
     """Stores the content of the messages"""
@@ -40,6 +32,14 @@ class Message:
     @staticmethod
     def convert_update_to_owner(update: Update):
         return f"{update.message.from_user.first_name} {update.message.from_user.last_name}"
+
+
+def get_redis_client() -> Redis:
+    """
+    Gets the Redis client
+    @return: the Redis client
+    """
+    return redis_client_singleton
 
 
 def store_message(redis_client: Redis,
@@ -76,7 +76,8 @@ def chat_exists(redis_client: Redis,
     @param chat_id: The unique identifier for the chat session.
     @return: True if chat exists
     """
-    return redis_client.exists(str(chat_id))
+    exists = True if redis_client.exists(str(chat_id)) != 0 else False
+    return exists
 
 
 def get_latest_n_messages(
@@ -92,6 +93,11 @@ def get_latest_n_messages(
     @param number_of_msgs:
     @return:
     """
+
+    # Guard clause
+    if number_of_msgs <= 0:
+        return []
+
     serialized_messages = redis_client.lrange(str(chat_id), 0, number_of_msgs - 1)
     logger.info(f"Redis Messages: {serialized_messages}")
 
