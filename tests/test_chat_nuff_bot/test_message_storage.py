@@ -1,9 +1,10 @@
 from datetime import datetime
+from typing import List, Tuple
 
 import pytest
 from fakeredis import FakeRedis
 
-from chat_nuff_bot.message_storage import Message, store_message
+from chat_nuff_bot.message_storage import Message, store_message, DEFAULT_MESSAGE_STORAGE
 
 
 def test_store_message(stub_redis_client):
@@ -60,12 +61,27 @@ def test_store_message_does_not_bleed_into_other_chat(stub_redis_client):
     # of messages for the chat. Hence, Chat B should have 3.
 
 
-def test_store_message_only_keeps_latest_messages():
+def test_store_message_only_keeps_latest_messages(stub_redis_client):
     # Given: There are maximum messages for the chat
+    chat_id = -100
+    messages_and_count: list[tuple[Message, int]] = [
+        _create_test_message(stub_redis_client, chat_id, msg_id, content=f"Test message chat: {chat_id}, id: {msg_id}")
+        for msg_id in range(DEFAULT_MESSAGE_STORAGE + 1)
+    ]
+
     # When: We store another message
+    last_message = messages_and_count[-1][0]
+    next_message = Message(
+        message_id=last_message.message_id + 1,
+        content=f"Test message chat: {chat_id}, id: {last_message.message_id + 1}",
+        owner_id=901,
+        owner_name='Unit Tester',
+        created_at=datetime.now().isoformat()
+    )
+    result = store_message(stub_redis_client, chat_id, next_message)
+
     # Then: The chat should have maximum messages
-    # TODO: Saving this one for Alrick
-    pass
+    assert result == DEFAULT_MESSAGE_STORAGE
 
 
 @pytest.fixture
