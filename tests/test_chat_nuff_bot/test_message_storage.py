@@ -141,10 +141,8 @@ def test_get_latest_n_messages_for_non_existent_chat(stub_redis_client):
 def test_get_latest_n_messages_when_n_is_invalid(stub_redis_client, num_of_msgs):
     # Given: We have 10 messages
     chat_id = -100
-    created_messages_and_count: list[tuple[Message, int]] = [
+    for msg_id in range(10):
         _create_test_message(stub_redis_client, chat_id, msg_id, content=f"Test message chat: {chat_id}, id: {msg_id}")
-        for msg_id in range(10)
-    ]
 
     # When: We get an invalid number of messages
     latest_messages = get_latest_n_messages(stub_redis_client, chat_id, num_of_msgs)

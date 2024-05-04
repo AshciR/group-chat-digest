@@ -6,8 +6,12 @@ from dotenv import load_dotenv
 from telegram import Update
 from telegram.ext import ApplicationBuilder, ContextTypes, CommandHandler, filters, MessageHandler
 
-from message_storage import Message, get_redis_client, store_message, chat_exists, get_latest_n_messages, \
-    DEFAULT_MESSAGE_STORAGE
+from message_storage import (Message,
+                             get_redis_client,
+                             store_message,
+                             chat_exists,
+                             get_latest_n_messages,
+                             DEFAULT_MESSAGE_STORAGE)
 from openai_utils import get_ai_client, summarize_messages_using_ai
 
 load_dotenv()
@@ -117,16 +121,14 @@ if __name__ == '__main__':
         .token(telegram_token) \
         .build()
 
-    start_handler = CommandHandler('start', start)
-    application.add_handler(start_handler)
+    handlers = [
+        CommandHandler('start', start),
+        CommandHandler('gist', summarize),
+        CommandHandler('replay', replay_messages),
+        MessageHandler(filters.TEXT & (~filters.COMMAND), listen_for_messages)
+    ]
 
-    summarize_handler = CommandHandler('gist', summarize)
-    application.add_handler(summarize_handler)
-
-    spit_handler = CommandHandler('replay', replay_messages)
-    application.add_handler(spit_handler)
-
-    listen_for_messages_handler = MessageHandler(filters.TEXT & (~filters.COMMAND), listen_for_messages)
-    application.add_handler(listen_for_messages_handler)
+    for handler in handlers:
+        application.add_handler(handler)
 
     application.run_polling()
