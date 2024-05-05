@@ -11,10 +11,8 @@ from message_storage import (Message,
                              store_message,
                              chat_exists,
                              get_latest_n_messages,
-                             DEFAULT_MESSAGE_STORAGE)
+                             DEFAULT_MESSAGE_STORAGE, configure_message_storage)
 from openai_utils import get_ai_client, summarize_messages_using_ai
-
-load_dotenv()
 
 logging.basicConfig(
     format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
@@ -115,6 +113,10 @@ async def listen_for_messages(update: Update, context: ContextTypes.DEFAULT_TYPE
 
 
 if __name__ == '__main__':
+
+    load_dotenv()
+    configure_message_storage()
+
     telegram_token = os.getenv('TELEGRAM_API_KEY')
 
     application = ApplicationBuilder() \
