@@ -1,5 +1,6 @@
 import logging
 import os
+import sys
 from typing import Sequence
 
 from dotenv import load_dotenv
@@ -115,7 +116,10 @@ async def listen_for_messages(update: Update, context: ContextTypes.DEFAULT_TYPE
 if __name__ == '__main__':
 
     load_dotenv()
-    configure_message_storage()
+
+    if not configure_message_storage():
+        logger.critical("Failed to configure the message storage. Exiting the application.")
+        sys.exit(1)  # Exit the program with an error code
 
     telegram_token = os.getenv('TELEGRAM_API_KEY')
 

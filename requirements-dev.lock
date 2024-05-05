@@ -42,7 +42,9 @@ pydantic==2.6.1
 pydantic-core==2.16.2
     # via pydantic
 pytest==8.2.0
+    # via pytest-mock
     # via pytest-xdist
+pytest-mock==3.14.0
 pytest-spec==3.2.0
 pytest-xdist==3.6.1
 python-dotenv==1.0.1

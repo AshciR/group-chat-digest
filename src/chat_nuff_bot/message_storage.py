@@ -14,14 +14,19 @@ DEFAULT_MESSAGE_STORAGE = 100
 
 
 def configure_message_storage() -> bool:
-    global redis_client_singleton
-    host = os.getenv('REDIS_HOST')
-    port = os.getenv('REDIS_PORT')
-    db = os.getenv('REDIS_DB')
-    use_tls = str_to_bool((os.getenv('REDIS_USE_TLS')))  # We have to use TLS with Elasticache
 
-    redis_client_singleton = Redis(host=host, port=port, db=db, ssl=use_tls)
-    return True
+    try:
+        global redis_client_singleton
+        host = os.getenv('REDIS_HOST')
+        port = os.getenv('REDIS_PORT')
+        db = os.getenv('REDIS_DB')
+        use_tls = str_to_bool((os.getenv('REDIS_USE_TLS')))  # We have to use TLS with Elasticache
+        timeout = int(os.getenv('REDIS_TIMEOUT'))
+
+        redis_client_singleton = Redis(host=host, port=port, db=db, ssl=use_tls, socket_timeout=timeout)
+        return True
+    except TimeoutError:
+        return False
 
 
 @dataclass
