@@ -47,6 +47,7 @@ pythonpath = ["src"]
 build-dev = "docker-compose up -d --build"
 dev = "docker-compose up -d"
 stop = "docker-compose down"
+redis = "docker-compose up -d redis"
 tests = "pytest -n auto tests --spec"
 lint = "ruff check src/"
 

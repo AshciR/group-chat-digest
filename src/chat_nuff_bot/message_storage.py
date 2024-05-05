@@ -3,7 +3,6 @@ import logging
 import os
 from dataclasses import dataclass, asdict
 
-import redis
 from dotenv import load_dotenv
 from redis import Redis
 from telegram import Update
@@ -17,7 +16,7 @@ DEFAULT_MESSAGE_STORAGE = 100
 host = os.getenv('REDIS_HOST')
 port = os.getenv('REDIS_PORT')
 db = os.getenv('REDIS_DB')
-redis_client_singleton = redis.Redis(host=host, port=port, db=db)
+redis_client_singleton = Redis(host=host, port=port, db=db)
 
 
 @dataclass
