@@ -3,8 +3,14 @@ from datetime import datetime
 import pytest
 from fakeredis import FakeRedis
 
-from chat_nuff_bot.message_storage import Message, store_message, DEFAULT_MESSAGE_STORAGE, chat_exists, \
-    get_latest_n_messages, configure_message_storage
+from message_storage import (
+    Message,
+    store_message,
+    DEFAULT_MESSAGE_STORAGE,
+    chat_exists,
+    get_latest_n_messages,
+    configure_message_storage
+)
 
 
 def test_store_message(stub_redis_client):
@@ -152,7 +158,6 @@ def test_get_latest_n_messages_when_n_is_invalid(stub_redis_client, num_of_msgs)
 
 
 def test_configure_message_storage_success(mocker):
-
     # Given: We have valid configs
     mocker.patch('os.getenv', side_effect=lambda x: {'REDIS_HOST': 'localhost',
                                                      'REDIS_PORT': '6379',
@@ -167,7 +172,6 @@ def test_configure_message_storage_success(mocker):
 
 
 def test_configure_message_storage_timeout(mocker):
-
     # Given: We have valid configs
     mocker.patch('os.getenv', side_effect=lambda x: {'REDIS_HOST': 'localhost',
                                                      'REDIS_PORT': '6379',

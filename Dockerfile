@@ -14,4 +14,4 @@ RUN pip install --no-cache-dir -r requirements.lock
 EXPOSE 80
 
 # Run app.py when the container launches
-CMD ["python", "src/chat_nuff_bot/telegram_bot.py"]
+CMD ["python", "src/telegram_bot.py"]

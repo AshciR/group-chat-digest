@@ -6,7 +6,7 @@ from dataclasses import dataclass, asdict
 from redis import Redis
 from telegram import Update
 
-from chat_nuff_bot.utils import str_to_bool
+from utils import str_to_bool
 
 logger = logging.getLogger(__name__)
 
@@ -22,6 +22,9 @@ def configure_message_storage() -> bool:
         db = os.getenv('REDIS_DB')
         use_tls = str_to_bool((os.getenv('REDIS_USE_TLS')))  # We have to use TLS with Elasticache
         timeout = int(os.getenv('REDIS_TIMEOUT'))
+
+        logger.info(f"Connecting to Redis at: {host}:{port}")
+        logger.info(f"Redis DB: {db}, TLS: {use_tls}, Timeout:{timeout}")
 
         redis_client_singleton = Redis(host=host, port=port, db=db, ssl=use_tls, socket_timeout=timeout)
         return True

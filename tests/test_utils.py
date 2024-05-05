@@ -1,6 +1,6 @@
 import pytest
 
-from chat_nuff_bot.utils import str_to_bool
+from utils import str_to_bool
 
 
 @pytest.mark.parametrize("test_input,expected", [
