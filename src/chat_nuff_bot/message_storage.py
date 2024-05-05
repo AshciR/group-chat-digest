@@ -7,6 +7,8 @@ from dotenv import load_dotenv
 from redis import Redis
 from telegram import Update
 
+from chat_nuff_bot.utils import str_to_bool
+
 load_dotenv()
 
 logger = logging.getLogger(__name__)
@@ -16,7 +18,9 @@ DEFAULT_MESSAGE_STORAGE = 100
 host = os.getenv('REDIS_HOST')
 port = os.getenv('REDIS_PORT')
 db = os.getenv('REDIS_DB')
-redis_client_singleton = Redis(host=host, port=port, db=db)
+use_tls = str_to_bool((os.getenv('REDIS_USE_TLS')))  # We have to use TLS with Elasticache
+
+redis_client_singleton = Redis(host=host, port=port, db=db, ssl=use_tls)
 
 
 @dataclass
