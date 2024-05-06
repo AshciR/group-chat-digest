@@ -166,7 +166,7 @@ def test_configure_message_storage_success(mocker):
                                                      'REDIS_TIMEOUT': '5'}.get(x))
 
     mock_redis = mocker.patch('message_storage.Redis')
-    mock_redis.return_value.ping.return_value = "PONG"
+    mock_redis.return_value.ping.return_value = True
 
     # Expect: Connection to be successful
     assert configure_message_storage()
@@ -181,7 +181,7 @@ def test_configure_message_storage_fail_ping(mocker):
                                                      'REDIS_TIMEOUT': '5'}.get(x))
 
     mock_redis = mocker.patch('message_storage.Redis')
-    mock_redis.return_value.ping.return_value = "NO PONG"
+    mock_redis.return_value.ping.return_value = False
 
     # Expect: Connection to be successful
     assert not configure_message_storage()
