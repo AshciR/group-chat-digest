@@ -27,7 +27,8 @@ def configure_message_storage() -> bool:
         logger.info(f"Redis DB: {db}, TLS: {use_tls}, Timeout:{timeout}")
 
         redis_client_singleton = Redis(host=host, port=port, db=db, ssl=use_tls, socket_timeout=timeout)
-        return True
+        resp = redis_client_singleton.ping()
+        return True if resp == "PONG" else False
     except TimeoutError:
         return False
 

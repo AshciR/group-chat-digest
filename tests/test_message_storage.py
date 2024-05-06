@@ -165,10 +165,26 @@ def test_configure_message_storage_success(mocker):
                                                      'REDIS_USE_TLS': 'False',
                                                      'REDIS_TIMEOUT': '5'}.get(x))
 
-    mocker.patch('chat_nuff_bot.message_storage.Redis')
+    mock_redis = mocker.patch('message_storage.Redis')
+    mock_redis.return_value.ping.return_value = "PONG"
 
     # Expect: Connection to be successful
     assert configure_message_storage()
+
+
+def test_configure_message_storage_fail_ping(mocker):
+    # Given: We have valid configs
+    mocker.patch('os.getenv', side_effect=lambda x: {'REDIS_HOST': 'localhost',
+                                                     'REDIS_PORT': '6379',
+                                                     'REDIS_DB': '0',
+                                                     'REDIS_USE_TLS': 'False',
+                                                     'REDIS_TIMEOUT': '5'}.get(x))
+
+    mock_redis = mocker.patch('message_storage.Redis')
+    mock_redis.return_value.ping.return_value = "NO PONG"
+
+    # Expect: Connection to be successful
+    assert not configure_message_storage()
 
 
 def test_configure_message_storage_timeout(mocker):
@@ -179,7 +195,7 @@ def test_configure_message_storage_timeout(mocker):
                                                      'REDIS_USE_TLS': 'False',
                                                      'REDIS_TIMEOUT': '5'}.get(x))
 
-    mock_redis = mocker.patch('chat_nuff_bot.message_storage.Redis')
+    mock_redis = mocker.patch('message_storage.Redis')
 
     # When: The cache doesn't connect within time
     mock_redis.side_effect = TimeoutError
