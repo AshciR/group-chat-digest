@@ -29,6 +29,10 @@ def configure_message_storage() -> bool:
         redis_client_singleton = Redis(host=host, port=port, db=db, ssl=use_tls, socket_timeout=timeout)
         return redis_client_singleton.ping()
     except TimeoutError:
+        logger.exception("Timed out while connecting to Redis.")
+        return False
+    except Exception as ex:
+        logger.exception("Unable to connect to Redis. See exception details")
         return False
 
 
