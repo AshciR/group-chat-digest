@@ -3,21 +3,37 @@ import logging
 import os
 from dataclasses import dataclass, asdict
 
-import redis
-from dotenv import load_dotenv
 from redis import Redis
 from telegram import Update
 
-load_dotenv()
+from utils import str_to_bool
 
 logger = logging.getLogger(__name__)
 
 DEFAULT_MESSAGE_STORAGE = 100
 
-host = os.getenv('REDIS_HOST')
-port = os.getenv('REDIS_PORT')
-db = os.getenv('REDIS_DB')
-redis_client_singleton = redis.Redis(host=host, port=port, db=db)
+
+def configure_message_storage() -> bool:
+
+    try:
+        global redis_client_singleton
+        host = os.getenv('REDIS_HOST')
+        port = os.getenv('REDIS_PORT')
+        db = os.getenv('REDIS_DB')
+        use_tls = str_to_bool((os.getenv('REDIS_USE_TLS')))  # We have to use TLS with Elasticache
+        timeout = int(os.getenv('REDIS_TIMEOUT'))
+
+        logger.info(f"Connecting to Redis at: {host}:{port}")
+        logger.info(f"Redis DB: {db}, TLS: {use_tls}, Timeout:{timeout}")
+
+        redis_client_singleton = Redis(host=host, port=port, db=db, ssl=use_tls, socket_timeout=timeout)
+        return redis_client_singleton.ping()
+    except TimeoutError:
+        logger.exception("Timed out while connecting to Redis.")
+        return False
+    except Exception as ex:
+        logger.exception("Unable to connect to Redis. See exception details")
+        return False
 
 
 @dataclass

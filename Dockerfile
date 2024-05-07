@@ -10,8 +10,9 @@ COPY . /app
 # Install any needed dependencies specified in requirements.txt
 RUN pip install --no-cache-dir -r requirements.lock
 
-# Make port 80 available to the world outside this container
+# Make HTTP and Redis ports available to the world outside this container
 EXPOSE 80
+EXPOSE 6379
 
 # Run app.py when the container launches
-CMD ["python", "src/chat_nuff_bot/telegram_bot.py"]
+CMD ["python", "src/telegram_bot.py"]

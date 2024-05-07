@@ -3,8 +3,14 @@ from datetime import datetime
 import pytest
 from fakeredis import FakeRedis
 
-from chat_nuff_bot.message_storage import Message, store_message, DEFAULT_MESSAGE_STORAGE, chat_exists, \
-    get_latest_n_messages
+from message_storage import (
+    Message,
+    store_message,
+    DEFAULT_MESSAGE_STORAGE,
+    chat_exists,
+    get_latest_n_messages,
+    configure_message_storage
+)
 
 
 def test_store_message(stub_redis_client):
@@ -149,6 +155,53 @@ def test_get_latest_n_messages_when_n_is_invalid(stub_redis_client, num_of_msgs)
 
     # Then: It should be an empty list
     assert len(latest_messages) == 0
+
+
+def test_configure_message_storage_success(mocker):
+    # Given: We have valid configs
+    mocker.patch('os.getenv', side_effect=lambda x: {'REDIS_HOST': 'localhost',
+                                                     'REDIS_PORT': '6379',
+                                                     'REDIS_DB': '0',
+                                                     'REDIS_USE_TLS': 'False',
+                                                     'REDIS_TIMEOUT': '5'}.get(x))
+
+    mock_redis = mocker.patch('message_storage.Redis')
+    mock_redis.return_value.ping.return_value = True
+
+    # Expect: Connection to be successful
+    assert configure_message_storage()
+
+
+def test_configure_message_storage_fail_ping(mocker):
+    # Given: We have valid configs
+    mocker.patch('os.getenv', side_effect=lambda x: {'REDIS_HOST': 'localhost',
+                                                     'REDIS_PORT': '6379',
+                                                     'REDIS_DB': '0',
+                                                     'REDIS_USE_TLS': 'False',
+                                                     'REDIS_TIMEOUT': '5'}.get(x))
+
+    mock_redis = mocker.patch('message_storage.Redis')
+    mock_redis.return_value.ping.return_value = False
+
+    # Expect: Connection to be successful
+    assert not configure_message_storage()
+
+
+def test_configure_message_storage_timeout(mocker):
+    # Given: We have valid configs
+    mocker.patch('os.getenv', side_effect=lambda x: {'REDIS_HOST': 'localhost',
+                                                     'REDIS_PORT': '6379',
+                                                     'REDIS_DB': '0',
+                                                     'REDIS_USE_TLS': 'False',
+                                                     'REDIS_TIMEOUT': '5'}.get(x))
+
+    mock_redis = mocker.patch('message_storage.Redis')
+
+    # When: The cache doesn't connect within time
+    mock_redis.side_effect = TimeoutError
+
+    # Then: We get a False
+    assert not configure_message_storage()
 
 
 @pytest.fixture
