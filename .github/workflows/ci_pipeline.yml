@@ -32,5 +32,5 @@ jobs:
     - name: Add .venv to PATH
       run: echo "$GITHUB_WORKSPACE/.venv/bin" >> $GITHUB_PATH
 
-    - name: Run pytest
-      run: pytest tests
+    - name: Run tests
+      run: pytest tests -n auto --spec
