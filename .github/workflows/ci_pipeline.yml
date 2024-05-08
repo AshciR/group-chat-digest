@@ -27,7 +27,7 @@ jobs:
     - name: Set up environment with uv
       run: |
         uv venv
-        uv pip install --no-cache-dir -r requirements.lock
+        uv pip install --no-cache-dir -r requirements-dev.lock
 
     - name: Add .venv to PATH
       run: echo "$GITHUB_WORKSPACE/.venv/bin" >> $GITHUB_PATH
