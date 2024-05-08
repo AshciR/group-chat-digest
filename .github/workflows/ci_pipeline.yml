@@ -33,4 +33,4 @@ jobs:
       run: echo "$GITHUB_WORKSPACE/.venv/bin" >> $GITHUB_PATH
 
     - name: Run pytest
-      run: pytest /tests
+      run: pytest tests
