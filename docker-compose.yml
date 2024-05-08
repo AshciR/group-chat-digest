@@ -7,6 +7,8 @@ services:
       - REDIS_HOST=redis
       - REDIS_PORT=${REDIS_PORT}
       - REDIS_DB=0
+      - REDIS_USE_TLS=False # No TLS during local dev
+      - REDIS_TIMEOUT=60 # seconds
       - TELEGRAM_API_KEY=${TELEGRAM_API_KEY}
       - OPENAI_API_KEY=${OPENAI_API_KEY}
     build:

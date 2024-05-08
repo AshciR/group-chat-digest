@@ -17,11 +17,11 @@ def configure_message_storage() -> bool:
 
     try:
         global redis_client_singleton
-        host = os.getenv('REDIS_HOST')
-        port = os.getenv('REDIS_PORT')
-        db = os.getenv('REDIS_DB')
-        use_tls = str_to_bool((os.getenv('REDIS_USE_TLS')))  # We have to use TLS with Elasticache
-        timeout = int(os.getenv('REDIS_TIMEOUT'))
+        host = os.getenv('REDIS_HOST', "localhost")
+        port = os.getenv('REDIS_PORT', 6379)
+        db = os.getenv('REDIS_DB', 0)
+        use_tls = str_to_bool((os.getenv('REDIS_USE_TLS', False)))  # We have to use TLS with Elasticache
+        timeout = int(os.getenv('REDIS_TIMEOUT', 60))
 
         logger.info(f"Connecting to Redis at: {host}:{port}")
         logger.info(f"Redis DB: {db}, TLS: {use_tls}, Timeout:{timeout}")
