@@ -159,11 +159,13 @@ def test_get_latest_n_messages_when_n_is_invalid(stub_redis_client, num_of_msgs)
 
 def test_configure_message_storage_success(mocker):
     # Given: We have valid configs
-    mocker.patch('os.getenv', side_effect=lambda x: {'REDIS_HOST': 'localhost',
-                                                     'REDIS_PORT': '6379',
-                                                     'REDIS_DB': '0',
-                                                     'REDIS_USE_TLS': 'False',
-                                                     'REDIS_TIMEOUT': '5'}.get(x))
+    mocker.patch(
+        'os.getenv', side_effect=lambda x, default=None: {'REDIS_HOST': 'localhost',
+                                                          'REDIS_PORT': '6379',
+                                                          'REDIS_DB': '0',
+                                                          'REDIS_USE_TLS': 'False',
+                                                          'REDIS_TIMEOUT': '5'}.get(x, default)
+    )
 
     mock_redis = mocker.patch('message_storage.Redis')
     mock_redis.return_value.ping.return_value = True
