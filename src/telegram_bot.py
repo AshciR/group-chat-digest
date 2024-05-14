@@ -1,3 +1,4 @@
+import asyncio
 import logging
 import os
 import sys
@@ -6,6 +7,7 @@ from typing import Sequence
 from dotenv import load_dotenv
 from telegram import Update
 from telegram.ext import ApplicationBuilder, ContextTypes, CommandHandler, filters, MessageHandler
+from telegram.ext._application import Application
 
 from message_storage import (Message,
                              get_redis_client,
@@ -17,16 +19,10 @@ from message_storage import (Message,
 from openai_utils import get_ai_client, summarize_messages_using_ai
 from white_list import is_whitelisted
 
-logging.basicConfig(
-    format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
-    level=logging.INFO
-)
-
 logger = logging.getLogger(__name__)
 
 
 async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
-
     chat_id = update.effective_chat.id
 
     if not is_whitelisted(chat_id):
@@ -128,8 +124,6 @@ async def listen_for_messages(update: Update, context: ContextTypes.DEFAULT_TYPE
         logger.info(f'chat id: {chat_id} attempted to use the bot but was not whitelisted')
         return
 
-
-
     message_owner = Message.convert_update_to_owner(update)
     message = Message(
         message_id=update.message.id,
@@ -145,8 +139,7 @@ async def listen_for_messages(update: Update, context: ContextTypes.DEFAULT_TYPE
     logger.info(f'Cache size: {count} from chat id: {chat_id}')
 
 
-if __name__ == '__main__':
-
+def get_application():
     load_dotenv()
 
     if not configure_message_storage():
@@ -169,4 +162,32 @@ if __name__ == '__main__':
     for handler in handlers:
         application.add_handler(handler)
 
-    application.run_polling()
+    return application
+
+
+async def run_bot_async(application: Application):
+    """
+    Runs the bot asynchronously.
+    Manually handles what :meth run_polling does.
+    We need to do this to run a webserver concurrently with the bot.
+    @param application:
+    @return:
+    """
+
+    await application.initialize()
+
+    updater = application.updater
+    await updater.start_polling()
+
+    await application.start()
+
+    # Keep the event loop running
+    try:
+        while True:
+            await asyncio.sleep(3600)  # Sleep for 1 hour and then re-check
+    except (KeyboardInterrupt, SystemExit):
+        pass
+    finally:
+        await updater.stop()
+        await application.stop()
+        await application.shutdown()
