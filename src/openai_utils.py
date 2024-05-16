@@ -1,9 +1,10 @@
 import os
 
+from dotenv import load_dotenv
 from openai import OpenAI
 
-
-api_key = os.getenv("OPENAI_API_KEY")
+load_dotenv()
+api_key = os.getenv("OPENAI_API_KEY", "fake-key")  # Need to add a default for the tests to work
 open_client_singleton = OpenAI(api_key=api_key)
 
 

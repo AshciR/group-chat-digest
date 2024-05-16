@@ -4,10 +4,6 @@ import os
 import sys
 
 from dotenv import load_dotenv
-from telegram import Update
-from telegram.ext import ApplicationBuilder, ContextTypes, CommandHandler, filters, MessageHandler
-from telegram.ext._application import Application
-
 from message_storage import (Message,
                              get_redis_client,
                              store_message,
@@ -15,6 +11,9 @@ from message_storage import (Message,
                              get_latest_n_messages,
                              DEFAULT_MESSAGE_STORAGE, configure_message_storage)
 from openai_utils import get_ai_client, summarize_messages_as_bullet_points, summarize_messages_as_paragraph
+from telegram import Update
+from telegram.ext import ApplicationBuilder, ContextTypes, CommandHandler, filters, MessageHandler
+from telegram.ext._application import Application, BaseHandler
 from white_list import is_whitelisted
 
 logger = logging.getLogger(__name__)
@@ -191,11 +190,11 @@ async def help_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
         return
 
     help_text = """Welcome to the ChatNuff bot 🗣️🤖!
-    Available commands:
-    - /start (number of messages): Summarizes the last N messages in the chat. Defaults to 100.
-    - /gist (number of messages): Summarizes the last N messages in the chat in a bullet point format.
-    - /help: Gives information about the bot.
-    """
+Available commands:
+- /start (number of messages): Summarizes the last N messages in the chat. Defaults to 100.
+- /gist (number of messages): Summarizes the last N messages in the chat in a bullet point format.
+- /help: Gives information about the bot.
+"""
     await context.bot.send_message(chat_id=chat_id, text=help_text)
 
 
@@ -212,17 +211,21 @@ def get_application():
         .token(telegram_token) \
         .build()
 
-    handlers = [
-        CommandHandler('start', start_handler),
-        CommandHandler('gist', gist_handler),
-        # CommandHandler('replay', _replay_messages_handler),
-        MessageHandler(filters.TEXT & (~filters.COMMAND), listen_for_messages_handler)
-    ]
+    handlers = get_handlers()
 
     for handler in handlers:
         application.add_handler(handler)
 
     return application
+
+
+def get_handlers() -> list[BaseHandler]:
+    return [
+        CommandHandler('start', start_handler),
+        CommandHandler('gist', gist_handler),
+        CommandHandler('help', help_handler),
+        MessageHandler(filters.TEXT & (~filters.COMMAND), listen_for_messages_handler)
+    ]
 
 
 async def run_bot_async(application: Application):
