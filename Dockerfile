@@ -1,6 +1,9 @@
 # Use an official Python runtime as a parent image
 FROM python:3.12-slim
 
+# Installing curl to use for health check
+RUN apt-get update && apt-get install -y curl && rm -rf /var/lib/apt/lists/*
+
 ENV WORKDIR="/app"
 
 # Tells Python to not write .pyc files which are the compiled bytecode files Python creates
@@ -34,4 +37,4 @@ EXPOSE 80
 EXPOSE 6379
 
 # Run app.py when the container launches
-CMD ["python", "src/telegram_bot.py"]
+CMD ["python", "src/main.py"]
