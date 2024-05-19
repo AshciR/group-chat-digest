@@ -2,27 +2,30 @@ import asyncio
 import logging
 import os
 import sys
-from typing import Sequence
 
 from dotenv import load_dotenv
-from telegram import Update
-from telegram.ext import ApplicationBuilder, ContextTypes, CommandHandler, filters, MessageHandler
-from telegram.ext._application import Application
-
 from message_storage import (Message,
                              get_redis_client,
                              store_message,
                              chat_exists,
                              get_latest_n_messages,
                              DEFAULT_MESSAGE_STORAGE, configure_message_storage)
-
-from openai_utils import get_ai_client, summarize_messages_using_ai
+from openai_utils import get_ai_client, summarize_messages_as_bullet_points, summarize_messages_as_paragraph
+from telegram import Update
+from telegram.ext import ApplicationBuilder, ContextTypes, CommandHandler, filters, MessageHandler
+from telegram.ext._application import Application, BaseHandler
 from white_list import is_whitelisted
 
 logger = logging.getLogger(__name__)
 
 
-async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
+async def start_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    """
+    Command that summarizes the last N messages as paragraphs
+    @param update:
+    @param context:
+    @return:
+    """
     chat_id = update.effective_chat.id
 
     if not is_whitelisted(chat_id):
@@ -30,18 +33,42 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
         await context.bot.send_message(chat_id=chat_id, text="You are not currently allowed to use this bot")
         return
 
-    await context.bot.send_message(chat_id=chat_id, text="Welcome to the ChatNuff bot 🤖")
+    redis_client = get_redis_client()
+
+    if not chat_exists(redis_client, chat_id):
+        empty_message_notice = "There are no messages to summarize"
+        await context.bot.send_message(chat_id=chat_id, text=empty_message_notice)
+    else:
+
+        # Making assumption that the 1st argument is the number
+        number_of_messages_to_summarize = await _determine_number_of_messages_from_message_context(context)
+
+        messages = get_latest_n_messages(redis_client, chat_id, number_of_messages_to_summarize)
+        # We have to reverse the list b/c Redis stores the latest message in index 0
+        messages.reverse()
+
+        # Send N messages to OpenAI
+        prompt_message_schema = await format_message_for_openai(messages)
+        summarized_msg = _summarize_messages_as_paragraph(prompt_message_schema)
+        await context.bot.send_message(chat_id=chat_id, text=summarized_msg)
 
 
-async def summarize(update: Update, context: ContextTypes.DEFAULT_TYPE):
+def _summarize_messages_as_paragraph(formatted_messages: str) -> str:
+
+    client = get_ai_client()
+    summary = summarize_messages_as_paragraph(client, formatted_messages)
+    logger.info(summary)
+
+    return summary
+
+
+async def gist_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
     """
-    Command that summarizes the last N messages
+    Command that summarizes the last N messages as bullet points
     @param update:
     @param context:
     @return:
     """
-    # Making assumption that the 1st argument is the number
-    number_of_messages_to_summarize = await _determine_number_of_messages_from_message_context(context)
 
     chat_id = update.effective_chat.id
 
@@ -57,12 +84,16 @@ async def summarize(update: Update, context: ContextTypes.DEFAULT_TYPE):
         await context.bot.send_message(chat_id=chat_id, text=empty_message_notice)
     else:
 
+        # Making assumption that the 1st argument is the number
+        number_of_messages_to_summarize = await _determine_number_of_messages_from_message_context(context)
+
         messages = get_latest_n_messages(redis_client, chat_id, number_of_messages_to_summarize)
         # We have to reverse the list b/c Redis stores the latest message in index 0
         messages.reverse()
 
         # Send N messages to OpenAI
-        summarized_msg = _summarize_messages(messages)
+        prompt_message_schema = await format_message_for_openai(messages)
+        summarized_msg = _summarize_messages_as_bullet_points(prompt_message_schema)
         await context.bot.send_message(chat_id=chat_id, text=summarized_msg)
 
 
@@ -75,20 +106,25 @@ async def _determine_number_of_messages_from_message_context(context):
     return number_of_messages
 
 
-def _summarize_messages(messages: Sequence[Message]) -> str:
+async def format_message_for_openai(messages: list[Message]) -> str:
     messages_content = [f"{msg.owner_name}: {msg.content}" for msg in messages]
     prompt_message_schema = ';'.join(messages_content)
+    return prompt_message_schema
+
+
+def _summarize_messages_as_bullet_points(formatted_messages: str) -> str:
 
     client = get_ai_client()
-    summary = summarize_messages_using_ai(client, prompt_message_schema)
+    summary = summarize_messages_as_bullet_points(client, formatted_messages)
     logger.info(summary)
 
     return summary
 
 
-async def replay_messages(update: Update, context: ContextTypes.DEFAULT_TYPE):
+async def _replay_messages_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
     """
-    # Command that replays the messages in storage
+    Command that replays the messages in storage
+    Used for debugging purposes. DO NOT USE IN PRODUCTION!
     @rtype: object
     """
 
@@ -112,7 +148,7 @@ async def replay_messages(update: Update, context: ContextTypes.DEFAULT_TYPE):
             await context.bot.send_message(chat_id=chat_id, text=message.content)
 
 
-async def listen_for_messages(update: Update, context: ContextTypes.DEFAULT_TYPE):
+async def listen_for_messages_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
     """
     # Command that listens for messages and stores them.
     @rtype: object
@@ -139,6 +175,29 @@ async def listen_for_messages(update: Update, context: ContextTypes.DEFAULT_TYPE
     logger.info(f'Cache size: {count} from chat id: {chat_id}')
 
 
+async def help_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    """
+    Command that summarizes the last N messages as paragraphs
+    @param update:
+    @param context:
+    @return:
+    """
+    chat_id = update.effective_chat.id
+
+    if not is_whitelisted(chat_id):
+        logger.info(f'chat id: {chat_id} attempted to use the bot but was not whitelisted')
+        await context.bot.send_message(chat_id=chat_id, text="You are not currently allowed to use this bot")
+        return
+
+    help_text = """Welcome to the ChatNuff bot 🗣️🤖!
+Available commands:
+- /start (number of messages): Summarizes the last N messages in the chat. Defaults to 100.
+- /gist (number of messages): Summarizes the last N messages in the chat in a bullet point format.
+- /help: Gives information about the bot.
+"""
+    await context.bot.send_message(chat_id=chat_id, text=help_text)
+
+
 def get_application():
     load_dotenv()
 
@@ -152,17 +211,21 @@ def get_application():
         .token(telegram_token) \
         .build()
 
-    handlers = [
-        CommandHandler('start', start),
-        CommandHandler('gist', summarize),
-        CommandHandler('replay', replay_messages),
-        MessageHandler(filters.TEXT & (~filters.COMMAND), listen_for_messages)
-    ]
+    handlers = get_handlers()
 
     for handler in handlers:
         application.add_handler(handler)
 
     return application
+
+
+def get_handlers() -> list[BaseHandler]:
+    return [
+        CommandHandler('start', start_handler),
+        CommandHandler('gist', gist_handler),
+        CommandHandler('help', help_handler),
+        MessageHandler(filters.TEXT & (~filters.COMMAND), listen_for_messages_handler)
+    ]
 
 
 async def run_bot_async(application: Application):
