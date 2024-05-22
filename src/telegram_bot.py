@@ -57,7 +57,7 @@ def _summarize_messages_as_paragraph(formatted_messages: str) -> str:
 
     client = get_ai_client()
     summary = summarize_messages_as_paragraph(client, formatted_messages)
-    logger.info(summary)
+    logger.debug(summary)
 
     return summary
 
@@ -116,7 +116,7 @@ def _summarize_messages_as_bullet_points(formatted_messages: str) -> str:
 
     client = get_ai_client()
     summary = summarize_messages_as_bullet_points(client, formatted_messages)
-    logger.info(summary)
+    logger.debug(summary)
 
     return summary
 
@@ -168,11 +168,11 @@ async def listen_for_messages_handler(update: Update, context: ContextTypes.DEFA
         owner_name=message_owner,
         created_at=update.message.date.isoformat()
     )
-    logger.info(f'Got message: {message} from chat id: {chat_id}')
+    logger.debug(f'Got message: {message} from chat id: {chat_id}')
 
     redis_client = get_redis_client()
     count = store_message(redis_client, chat_id, message)
-    logger.info(f'Cache size: {count} from chat id: {chat_id}')
+    logger.debug(f'Cache size: {count} from chat id: {chat_id}')
 
 
 async def help_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):

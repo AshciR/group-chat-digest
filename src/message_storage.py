@@ -115,7 +115,7 @@ def get_latest_n_messages(
         return []
 
     serialized_messages = redis_client.lrange(str(chat_id), 0, number_of_msgs - 1)
-    logger.info(f"Redis Messages: {serialized_messages}")
+    logger.debug(f"Redis Messages: {serialized_messages}")
 
     messages_json = [json.loads(msg) for msg in serialized_messages]
     messages = [Message(**msg) for msg in messages_json]
