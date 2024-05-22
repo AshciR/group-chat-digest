@@ -1,9 +1,9 @@
 
 def get_white_list() -> list[int]:
     white_list = [
-        -10013342944461, #G
+        -1001334294461, #Gerousia
         -4170925867, #CNS
-        # 170626720, #Richie
+        170626720, #Richie
         320338590, #Alrick
     ]
 
