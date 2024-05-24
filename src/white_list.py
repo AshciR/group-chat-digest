@@ -3,6 +3,7 @@ def get_white_list() -> list[int]:
     white_list = [
         -1001334294461,  # Gerousia
         -1002088317098,  # Girls chat
+        -4257039919,     # Test group
         -4170925867,     # CNS
         170626720,       # Richie
         320338590,       # Alrick

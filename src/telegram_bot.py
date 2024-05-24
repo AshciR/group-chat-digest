@@ -62,6 +62,47 @@ def _summarize_messages_as_paragraph(formatted_messages: str) -> str:
     return summary
 
 
+async def peek_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    """
+    Command that summarizes the last N messages as bullet points
+    and messages the user privately.
+    @param update:
+    @param context:
+    @return:
+    """
+
+    chat_id = update.effective_chat.id
+
+    if not is_whitelisted(chat_id):
+        logger.info(f'chat id: {chat_id} attempted to use the bot but was not whitelisted')
+        await context.bot.send_message(chat_id=chat_id, text="You are not currently allowed to use this bot")
+        return
+
+    redis_client = get_redis_client()
+
+    if not chat_exists(redis_client, chat_id):
+        empty_message_notice = "There are no messages to summarize"
+        await context.bot.send_message(chat_id=chat_id, text=empty_message_notice)
+    else:
+
+        # Making assumption that the 1st argument is the number
+        number_of_messages_to_summarize = await _determine_number_of_messages_from_message_context(context)
+
+        messages = get_latest_n_messages(redis_client, chat_id, number_of_messages_to_summarize)
+        # We have to reverse the list b/c Redis stores the latest message in index 0
+        messages.reverse()
+
+        # Send N messages to OpenAI
+        prompt_message_schema = await format_message_for_openai(messages)
+        summarized_msg = _summarize_messages_as_bullet_points(prompt_message_schema)
+
+        gist_prefix = f"Gist from {update.effective_chat.effective_name} chat:\n"
+        private_gist = gist_prefix + summarized_msg
+
+        # Send private message to the user
+        await context.bot.send_message(chat_id=update.effective_user.id, text=private_gist)
+
+
 async def gist_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
     """
     Command that summarizes the last N messages as bullet points
@@ -193,6 +234,7 @@ async def help_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
 Available commands:
 - /start (number of messages): Summarizes the last N messages in the chat. Defaults to 100.
 - /gist (number of messages): Summarizes the last N messages in the chat in a bullet point format.
+- /peek (number of messages): Privately messages you with the bullet point summary of the last N messages.
 - /help: Gives information about the bot.
 """
     await context.bot.send_message(chat_id=chat_id, text=help_text)
@@ -224,6 +266,7 @@ def get_handlers() -> list[BaseHandler]:
         CommandHandler('start', start_handler),
         CommandHandler('gist', gist_handler),
         CommandHandler('help', help_handler),
+        CommandHandler('peek', peek_handler),
         MessageHandler(filters.TEXT & (~filters.COMMAND), listen_for_messages_handler)
     ]
 
