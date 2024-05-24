@@ -4,6 +4,11 @@ import os
 import sys
 
 from dotenv import load_dotenv
+from telegram import Update
+from telegram.error import Forbidden
+from telegram.ext import ApplicationBuilder, ContextTypes, CommandHandler, filters, MessageHandler
+from telegram.ext._application import Application, BaseHandler
+
 from message_storage import (Message,
                              get_redis_client,
                              store_message,
@@ -11,13 +16,14 @@ from message_storage import (Message,
                              get_latest_n_messages,
                              DEFAULT_MESSAGE_STORAGE, configure_message_storage)
 from openai_utils import get_ai_client, summarize_messages_as_bullet_points, summarize_messages_as_paragraph
-from telegram import Update
-from telegram.error import Forbidden
-from telegram.ext import ApplicationBuilder, ContextTypes, CommandHandler, filters, MessageHandler
-from telegram.ext._application import Application, BaseHandler
 from white_list import is_whitelisted
 
 logger = logging.getLogger(__name__)
+
+START_COMMAND = 'start'
+GIST_COMMAND = 'gist'
+WHISPER_COMMAND = 'whspr'
+HELP_COMMAND = 'help'
 
 
 async def start_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
@@ -235,12 +241,12 @@ async def help_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
         await context.bot.send_message(chat_id=chat_id, text="You are not currently allowed to use this bot")
         return
 
-    help_text = """Welcome to the ChatNuff bot 🗣️🤖!
+    help_text = f"""Welcome to the ChatNuff bot 🗣️🤖!
 Available commands:
-- /start (number of messages): Summarizes the last N messages in the chat. Defaults to 100.
-- /gist (number of messages): Summarizes the last N messages in the chat in a bullet point format.
-- /peek (number of messages): Privately messages you with the bullet point summary of the last N messages.
-- /help: Gives information about the bot.
+- /{START_COMMAND} (number of messages): Summarizes the last N messages in the chat. Defaults to 100.
+- /{GIST_COMMAND} (number of messages): Summarizes the last N messages in the chat in a bullet point format.
+- /{WHISPER_COMMAND} (number of messages): Privately messages you with the bullet point summary of the last N messages.
+- /{HELP_COMMAND}: Gives information about the bot.
 """
     await context.bot.send_message(chat_id=chat_id, text=help_text)
 
@@ -268,10 +274,10 @@ def get_application():
 
 def get_handlers() -> list[BaseHandler]:
     return [
-        CommandHandler('start', start_handler),
-        CommandHandler('gist', gist_handler),
-        CommandHandler('help', help_handler),
-        CommandHandler('whspr', whisper_handler),
+        CommandHandler(START_COMMAND, start_handler),
+        CommandHandler(GIST_COMMAND, gist_handler),
+        CommandHandler(HELP_COMMAND, help_handler),
+        CommandHandler(WHISPER_COMMAND, whisper_handler),
         MessageHandler(filters.TEXT & (~filters.COMMAND), listen_for_messages_handler)
     ]
 

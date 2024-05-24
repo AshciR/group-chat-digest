@@ -2,6 +2,8 @@ import asyncio
 import logging
 import os
 
+from telegram.error import Conflict
+
 from server import run_server_async
 from telegram_bot import get_application, run_bot_async
 from utils import str_to_bool
@@ -38,5 +40,7 @@ if __name__ == '__main__':
         asyncio.run(main())
     except KeyboardInterrupt:
         logger.info("Application shutdown by KeyboardInterrupt successfully")
+    except Conflict:
+        logger.info("Multiple bots are running. Likely due to a deployment in progress")
     except Exception:
         logger.exception("Unexpected exception happened in main")
