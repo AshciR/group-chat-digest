@@ -12,6 +12,7 @@ from message_storage import (Message,
                              DEFAULT_MESSAGE_STORAGE, configure_message_storage)
 from openai_utils import get_ai_client, summarize_messages_as_bullet_points, summarize_messages_as_paragraph
 from telegram import Update
+from telegram.error import Forbidden
 from telegram.ext import ApplicationBuilder, ContextTypes, CommandHandler, filters, MessageHandler
 from telegram.ext._application import Application, BaseHandler
 from white_list import is_whitelisted
@@ -62,7 +63,7 @@ def _summarize_messages_as_paragraph(formatted_messages: str) -> str:
     return summary
 
 
-async def peek_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
+async def whisper_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
     """
     Command that summarizes the last N messages as bullet points
     and messages the user privately.
@@ -100,7 +101,11 @@ async def peek_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
         private_gist = gist_prefix + summarized_msg
 
         # Send private message to the user
-        await context.bot.send_message(chat_id=update.effective_user.id, text=private_gist)
+        try:
+            await context.bot.send_message(chat_id=update.effective_user.id, text=private_gist)
+        except Forbidden:
+            warning_msg = "Sorry, but I can't message you privately unless you start a chat with me first."
+            await context.bot.send_message(chat_id=chat_id, text=warning_msg)
 
 
 async def gist_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
@@ -266,7 +271,7 @@ def get_handlers() -> list[BaseHandler]:
         CommandHandler('start', start_handler),
         CommandHandler('gist', gist_handler),
         CommandHandler('help', help_handler),
-        CommandHandler('peek', peek_handler),
+        CommandHandler('whspr', whisper_handler),
         MessageHandler(filters.TEXT & (~filters.COMMAND), listen_for_messages_handler)
     ]
 

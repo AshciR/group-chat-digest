@@ -2,7 +2,7 @@ import pytest
 from message_storage import Message
 from telegram.ext import CommandHandler, MessageHandler
 from telegram_bot import format_message_for_openai, get_handlers, start_handler, gist_handler, help_handler, \
-    listen_for_messages_handler, peek_handler
+    listen_for_messages_handler, whisper_handler
 
 
 @pytest.mark.asyncio
@@ -42,8 +42,8 @@ def test_get_handlers():
     assert handlers[2].callback == help_handler
 
     assert isinstance(handlers[3], CommandHandler)
-    assert handlers[3].commands == frozenset({'peek'})
-    assert handlers[3].callback == peek_handler
+    assert handlers[3].commands == frozenset({'whspr'})
+    assert handlers[3].callback == whisper_handler
 
     # Test MessageHandler
     assert isinstance(handlers[4], MessageHandler)
