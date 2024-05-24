@@ -1,4 +1,5 @@
 from datetime import datetime
+from unittest.mock import Mock
 
 import pytest
 from fakeredis import FakeRedis
@@ -204,6 +205,26 @@ def test_configure_message_storage_timeout(mocker):
 
     # Then: We get a False
     assert not configure_message_storage()
+
+
+@pytest.mark.parametrize("first_name, last_name, expected", [
+    ("John", "Doe", "John Doe"),          # Test case with both first and last names
+    ("Jane", None, "Jane"),               # Test case with only first name
+    ("Alice", "", "Alice")                # Test case with an empty last name
+])
+def test_convert_update_to_owner(first_name, last_name, expected):
+    # Given: The update has usernames
+    update = Mock()
+    update.message = Mock()
+    update.message.from_user = Mock()
+    update.message.from_user.first_name = first_name
+    update.message.from_user.last_name = last_name
+
+    # When: We convert it to message owner names
+    message_owner = Message.convert_update_to_owner(update)
+
+    # Then: It should be formatted correctly
+    assert message_owner == expected
 
 
 @pytest.fixture
