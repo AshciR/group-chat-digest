@@ -8,7 +8,7 @@ env.bak/
 venv.bak/
 
 # ECR Script
-build-and-push-arm-image.sh
+build-and-push-x64-image.sh
 
 # IDEs
 .vscode/
