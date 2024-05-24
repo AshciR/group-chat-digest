@@ -39,5 +39,4 @@ if __name__ == '__main__':
     except KeyboardInterrupt:
         logger.info("Application shutdown by KeyboardInterrupt successfully")
     except Exception:
-        logger.exception()
-
+        logger.exception("Unexpected exception happened in main")
