@@ -34,4 +34,9 @@ if __name__ == '__main__':
         logging.getLogger('telegram_bot').setLevel(logging.DEBUG)
         logging.getLogger('message_storage').setLevel(logging.DEBUG)
 
-    asyncio.run(main())
+    try:
+        asyncio.run(main())
+    except KeyboardInterrupt:
+        logger.info("Application shutdown by KeyboardInterrupt successfully")
+    except Exception:
+        logger.exception("Unexpected exception happened in main")
