@@ -21,12 +21,37 @@ from white_list import is_whitelisted
 logger = logging.getLogger(__name__)
 
 START_COMMAND = 'start'
+SUMMARY_COMMAND = 'summary'
 GIST_COMMAND = 'gist'
 WHISPER_COMMAND = 'whspr'
 HELP_COMMAND = 'help'
 
 
 async def start_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    """
+    Introduction command
+    @param update:
+    @param context:
+    @return:
+    """
+    chat_id = update.effective_chat.id
+
+    if not is_whitelisted(chat_id):
+        logger.info(f'chat id: {chat_id} attempted to use the bot but was not whitelisted')
+        await context.bot.send_message(chat_id=chat_id, text="You are not currently allowed to use this bot")
+        return
+
+    start_msg = """Welcome to the ChatNuff bot 🗣️🤖!
+    
+I'm here to help you get caught up on what you missed in the group chat.
+
+Use the /help command to learn about what I can do.
+"""
+
+    await context.bot.send_message(chat_id=chat_id, text=start_msg)
+
+
+async def summary_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
     """
     Command that summarizes the last N messages as paragraphs
     @param update:
@@ -242,11 +267,18 @@ async def help_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
         return
 
     help_text = f"""Welcome to the ChatNuff bot 🗣️🤖!
+
 Available commands:
-- /{START_COMMAND} (number of messages): Summarizes the last N messages in the chat. Defaults to 100.
-- /{GIST_COMMAND} (number of messages): Summarizes the last N messages in the chat in a bullet point format.
-- /{WHISPER_COMMAND} (number of messages): Privately messages you with the bullet point summary of the last N messages.
-- /{HELP_COMMAND}: Gives information about the bot.
+/{SUMMARY_COMMAND} Summarizes the last {DEFAULT_MESSAGE_STORAGE} messages.
+/{GIST_COMMAND} Gives you a bullet form of the last {DEFAULT_MESSAGE_STORAGE} messages.
+/{WHISPER_COMMAND} Privately messages you the bullet points of the last {DEFAULT_MESSAGE_STORAGE} messages.
+/{HELP_COMMAND}: Gives information about the bot.
+
+The bot can also summarize a certain number of messages if you provide it with a number.
+
+For example: /gist 50
+
+Will give you the bullet form of the last 50 messages.
 """
     await context.bot.send_message(chat_id=chat_id, text=help_text)
 
@@ -276,6 +308,7 @@ def get_handlers() -> list[BaseHandler]:
     return [
         CommandHandler(START_COMMAND, start_handler),
         CommandHandler(GIST_COMMAND, gist_handler),
+        CommandHandler(SUMMARY_COMMAND, summary_handler),
         CommandHandler(HELP_COMMAND, help_handler),
         CommandHandler(WHISPER_COMMAND, whisper_handler),
         MessageHandler(filters.TEXT & (~filters.COMMAND), listen_for_messages_handler)

@@ -1,7 +1,7 @@
 import pytest
 from message_storage import Message
 from telegram.ext import CommandHandler, MessageHandler
-from telegram_bot import format_message_for_openai, get_handlers, start_handler, gist_handler, help_handler, \
+from telegram_bot import format_message_for_openai, get_handlers, summary_handler, gist_handler, help_handler, \
     listen_for_messages_handler, whisper_handler
 
 
@@ -31,7 +31,7 @@ def test_get_handlers():
     # Test CommandHandlers
     assert isinstance(handlers[0], CommandHandler)
     assert handlers[0].commands == frozenset({'start'})
-    assert handlers[0].callback == start_handler
+    assert handlers[0].callback == summary_handler
 
     assert isinstance(handlers[1], CommandHandler)
     assert handlers[1].commands == frozenset({'gist'})
