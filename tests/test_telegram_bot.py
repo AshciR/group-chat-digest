@@ -1,8 +1,8 @@
 import pytest
 from message_storage import Message
 from telegram.ext import CommandHandler, MessageHandler
-from telegram_bot import format_message_for_openai, get_handlers, start_handler, gist_handler, help_handler, \
-    listen_for_messages_handler, whisper_handler
+from telegram_bot import format_message_for_openai, get_handlers, summary_handler, gist_handler, help_handler, \
+    listen_for_messages_handler, whisper_handler, start_handler
 
 
 @pytest.mark.asyncio
@@ -26,7 +26,7 @@ async def test_format_message_for_openai():
 def test_get_handlers():
     handlers = get_handlers()
 
-    assert len(handlers) == 5, "Expected 5 handlers"
+    assert len(handlers) == 6, "Expected 6 handlers"
 
     # Test CommandHandlers
     assert isinstance(handlers[0], CommandHandler)
@@ -38,16 +38,20 @@ def test_get_handlers():
     assert handlers[1].callback == gist_handler
 
     assert isinstance(handlers[2], CommandHandler)
-    assert handlers[2].commands == frozenset({'help'})
-    assert handlers[2].callback == help_handler
+    assert handlers[2].commands == frozenset({'summary'})
+    assert handlers[2].callback == summary_handler
 
     assert isinstance(handlers[3], CommandHandler)
-    assert handlers[3].commands == frozenset({'whspr'})
-    assert handlers[3].callback == whisper_handler
+    assert handlers[3].commands == frozenset({'help'})
+    assert handlers[3].callback == help_handler
+
+    assert isinstance(handlers[4], CommandHandler)
+    assert handlers[4].commands == frozenset({'whspr'})
+    assert handlers[4].callback == whisper_handler
 
     # Test MessageHandler
-    assert isinstance(handlers[4], MessageHandler)
-    assert handlers[4].callback == listen_for_messages_handler
+    assert isinstance(handlers[5], MessageHandler)
+    assert handlers[5].callback == listen_for_messages_handler
 
 
 
