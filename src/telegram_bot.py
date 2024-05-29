@@ -128,7 +128,7 @@ async def whisper_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
         prompt_message_schema = await format_message_for_openai(messages)
         summarized_msg = _summarize_messages_as_bullet_points(prompt_message_schema)
 
-        gist_prefix = f"Gist from {update.effective_chat.effective_name} chat:\n"
+        gist_prefix = f"Gist from {update.effective_chat.effective_name} chat:\n\n"
         private_gist = gist_prefix + summarized_msg
 
         # Send private message to the user
@@ -193,9 +193,14 @@ def _summarize_messages_as_bullet_points(formatted_messages: str) -> str:
 
     client = get_ai_client()
     summary = summarize_messages_as_bullet_points(client, formatted_messages)
-    logger.debug(summary)
 
-    return summary
+    # We want to add an extra line between the points for readability
+    bullet_points = summary.strip().split('\n')
+    formatted_bullet_points = '\n\n'.join(bullet_points)
+
+    logger.debug(formatted_bullet_points)
+
+    return formatted_bullet_points
 
 
 async def _replay_messages_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
