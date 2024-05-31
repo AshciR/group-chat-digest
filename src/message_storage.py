@@ -11,6 +11,7 @@ from utils import str_to_bool
 logger = logging.getLogger(__name__)
 
 DEFAULT_MESSAGE_STORAGE = 100
+MAX_MESSAGE_STORAGE = 200
 
 
 def configure_message_storage() -> bool:
@@ -76,7 +77,7 @@ def store_message(redis_client: Redis,
 
     redis_client.lpush(chat_key, serialized_message)
     # Trim the list to only keep the latest 200 messages
-    redis_client.ltrim(chat_key, 0, DEFAULT_MESSAGE_STORAGE - 1)
+    redis_client.ltrim(chat_key, 0, MAX_MESSAGE_STORAGE - 1)
 
     # Return the current number of messages in the list
     return redis_client.llen(chat_key)

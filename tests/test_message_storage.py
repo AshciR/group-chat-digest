@@ -10,7 +10,7 @@ from message_storage import (
     DEFAULT_MESSAGE_STORAGE,
     chat_exists,
     get_latest_n_messages,
-    configure_message_storage
+    configure_message_storage, MAX_MESSAGE_STORAGE
 )
 
 
@@ -73,7 +73,7 @@ def test_store_message_only_keeps_latest_messages(stub_redis_client):
     chat_id = -100
     messages_and_count: list[tuple[Message, int]] = [
         _create_test_message(stub_redis_client, chat_id, msg_id, content=f"Test message chat: {chat_id}, id: {msg_id}")
-        for msg_id in range(DEFAULT_MESSAGE_STORAGE + 1)
+        for msg_id in range(MAX_MESSAGE_STORAGE + 1)
     ]
 
     # When: We store another message
@@ -88,7 +88,7 @@ def test_store_message_only_keeps_latest_messages(stub_redis_client):
     result = store_message(stub_redis_client, chat_id, next_message)
 
     # Then: The chat should have maximum messages
-    assert result == DEFAULT_MESSAGE_STORAGE
+    assert result == MAX_MESSAGE_STORAGE
 
 
 def test_chat_exists(stub_redis_client):
