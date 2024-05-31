@@ -14,7 +14,7 @@ from message_storage import (Message,
                              store_message,
                              chat_exists,
                              get_latest_n_messages,
-                             DEFAULT_MESSAGE_STORAGE, configure_message_storage)
+                             DEFAULT_MESSAGE_STORAGE, configure_message_storage, MAX_MESSAGE_STORAGE)
 from openai_utils import get_ai_client, summarize_messages_as_bullet_points, summarize_messages_as_paragraph
 from white_list import is_whitelisted
 
@@ -279,11 +279,15 @@ Available commands:
 /{WHISPER_COMMAND} Privately messages you the bullet points of the last {DEFAULT_MESSAGE_STORAGE} messages.
 /{HELP_COMMAND}: Gives information about the bot.
 
-The bot can also summarize a certain number of messages if you provide it with a number.
+I can also summarize a certain number of messages if you provide me with a number.
 
 For example: /gist 50
 
 Will give you the bullet form of the last 50 messages.
+
+However, the maximum number of messages I can handle is {MAX_MESSAGE_STORAGE}.
+
+Happy chatting! 🗣️❤️
 """
     await context.bot.send_message(chat_id=chat_id, text=help_text)
 
