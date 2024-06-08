@@ -4,7 +4,6 @@ import os
 from dataclasses import dataclass, asdict
 
 from redis import Redis
-from redis.cluster import RedisCluster, ClusterNode
 from telegram import Update
 
 from utils import str_to_bool
@@ -26,18 +25,9 @@ def configure_message_storage() -> bool:
 
         global redis_client_singleton
 
-        local_development = str_to_bool(os.getenv('LOCAL', False))
-        if local_development:
-            logger.info(f"Connecting to Redis at: {host}:{port}")
-            logger.info(f"Redis DB: {db}, TLS: {use_tls}, Timeout:{timeout}")
-            redis_client_singleton = Redis(host=host, port=port, db=db, ssl=use_tls, socket_timeout=timeout)
-        else:
-            logger.info(f"Connecting to Redis cluster")
-            nodes = [ClusterNode(host, port)]
-            logger.info(f"Cluster Nodes: {nodes}")
-            redis_client_singleton = RedisCluster(
-                startup_nodes=nodes
-            )
+        logger.info(f"Connecting to Redis at: {host}:{port}")
+        logger.info(f"Redis DB: {db}, TLS: {use_tls}, Timeout:{timeout}")
+        redis_client_singleton = Redis(host=host, port=port, db=db, ssl=use_tls, socket_timeout=timeout)
 
         return redis_client_singleton.ping()
 

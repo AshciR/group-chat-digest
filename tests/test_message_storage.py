@@ -7,7 +7,6 @@ from fakeredis import FakeRedis
 from message_storage import (
     Message,
     store_message,
-    DEFAULT_MESSAGE_STORAGE,
     chat_exists,
     get_latest_n_messages,
     configure_message_storage, MAX_MESSAGE_STORAGE
@@ -168,7 +167,7 @@ def test_configure_message_storage_success(mocker):
                                                           'REDIS_TIMEOUT': '5'}.get(x, default)
     )
 
-    mock_redis = mocker.patch('message_storage.RedisCluster')
+    mock_redis = mocker.patch('message_storage.Redis')
     mock_redis.return_value.ping.return_value = True
 
     # Expect: Connection to be successful
