@@ -4,6 +4,7 @@ services:
   app:
     container_name: chat-nuff-bot
     environment:
+      - LOCAL=${LOCAL}
       - REDIS_HOST=redis
       - REDIS_PORT=${REDIS_PORT}
       - REDIS_DB=${REDIS_DB}

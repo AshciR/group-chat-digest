@@ -65,3 +65,27 @@ def summarize_messages_as_bullet_points(client: OpenAI, messages: str) -> str:
         ]
     )
     return completion.choices[0].message.content
+
+
+def ping_openai(client: OpenAI) -> str:
+    """
+    Used to test the status of the bot
+    @param client:
+    @return:
+    """
+
+    prompt = "I am pinging you to determine if you are functional. " \
+             "Respond with a HTTP status code, and the response time"
+
+    message = "Ping"
+    try:
+        completion = client.chat.completions.create(
+            model="gpt-3.5-turbo",
+            messages=[
+                {"role": "system", "content": f"{prompt}"},
+                {"role": "user", "content": f"{message}"}
+            ]
+        )
+        return completion.choices[0].message.content
+    except Exception as e:
+        return f"An error occurred: {e}"

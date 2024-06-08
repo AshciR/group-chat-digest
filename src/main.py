@@ -35,6 +35,7 @@ if __name__ == '__main__':
     if debug_mode:
         logging.getLogger('telegram_bot').setLevel(logging.DEBUG)
         logging.getLogger('message_storage').setLevel(logging.DEBUG)
+        logger.info("Running in LOCAL development mode! Do not use for production!")
 
     try:
         asyncio.run(main())

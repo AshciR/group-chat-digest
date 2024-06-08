@@ -1,9 +1,11 @@
 import asyncio
+import json
 import logging
 import os
 import sys
 
 from dotenv import load_dotenv
+from openai import OpenAI
 from telegram import Update
 from telegram.error import Forbidden
 from telegram.ext import ApplicationBuilder, ContextTypes, CommandHandler, filters, MessageHandler
@@ -15,16 +17,22 @@ from message_storage import (Message,
                              chat_exists,
                              get_latest_n_messages,
                              DEFAULT_MESSAGE_STORAGE, configure_message_storage, MAX_MESSAGE_STORAGE)
-from openai_utils import get_ai_client, summarize_messages_as_bullet_points, summarize_messages_as_paragraph
-from white_list import is_whitelisted
+from openai_utils import get_ai_client, summarize_messages_as_bullet_points, summarize_messages_as_paragraph, \
+    ping_openai
+from white_list import is_whitelisted, is_admin, get_admin_list
 
 logger = logging.getLogger(__name__)
 
+# Regular commands
 START_COMMAND = 'start'
 SUMMARY_COMMAND = 'summary'
 GIST_COMMAND = 'gist'
 WHISPER_COMMAND = 'whspr'
 HELP_COMMAND = 'help'
+
+# Admin commands
+REPLAY_COMMAND = 'replay'
+STATUS_COMMAND = 'status'
 
 
 async def start_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
@@ -86,7 +94,6 @@ async def summary_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
 
 def _summarize_messages_as_paragraph(formatted_messages: str) -> str:
-
     client = get_ai_client()
     summary = summarize_messages_as_paragraph(client, formatted_messages)
     logger.debug(summary)
@@ -190,7 +197,6 @@ async def format_message_for_openai(messages: list[Message]) -> str:
 
 
 def _summarize_messages_as_bullet_points(formatted_messages: str) -> str:
-
     client = get_ai_client()
     summary = summarize_messages_as_bullet_points(client, formatted_messages)
 
@@ -271,15 +277,20 @@ Happy chatting! 🗣️❤️
 async def replay_messages_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
     """
     Command that replays the messages in storage
-    Used for debugging purposes. DO NOT USE IN PRODUCTION!
+    Used for debugging purposes.
     @rtype: object
     """
 
     chat_id = update.effective_chat.id
 
-    if not is_whitelisted(chat_id):
-        logger.info(f'chat id: {chat_id} attempted to use the bot but was not whitelisted')
+    if not is_admin(chat_id):
+        logger.info(f'chat id: {chat_id} attempted to use the bot but was not an admin')
         await context.bot.send_message(chat_id=chat_id, text="You are not currently allowed to use this bot")
+
+        for admin_chat_id in get_admin_list():
+            msg = f"User: {update.effective_user.full_name} attempted to use an admin command. Their chat_id is {chat_id}"
+            await context.bot.send_message(chat_id=admin_chat_id, text=msg)
+
         return
 
     redis_client = get_redis_client()
@@ -288,11 +299,72 @@ async def replay_messages_handler(update: Update, context: ContextTypes.DEFAULT_
         await context.bot.send_message(chat_id=chat_id, text="There are no message to replay")
 
     else:
-        logger.debug(f'Replaying for chat id {chat_id} currently in storage.')
+        logger.info(f'Replaying for chat id {chat_id} currently in storage.')
 
         messages = get_latest_n_messages(redis_client, chat_id)
         for message in messages[::-1]:
             await context.bot.send_message(chat_id=chat_id, text=message.content)
+
+
+async def status_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    """
+    Command that gets the status of the bot.
+    Used for debugging purposes.
+    @rtype: object
+    """
+
+    chat_id = update.effective_chat.id
+
+    if not is_admin(chat_id):
+        logger.info(f'chat id: {chat_id} attempted to use the bot but was not an admin')
+        await context.bot.send_message(chat_id=chat_id, text="You are not currently allowed to use this bot")
+
+        for admin_chat_id in get_admin_list():
+            msg = f"User: {update.effective_user.full_name} attempted to use an admin command. Their chat_id is {chat_id}"
+            await context.bot.send_message(chat_id=admin_chat_id, text=msg)
+
+        return
+
+    # Open AI
+    ai_client = get_ai_client()
+    open_ai_status = await _get_open_ai_status(ai_client)
+    logger.info(open_ai_status)
+
+    # Redis
+    redis = get_redis_client()
+    redis_msg = await _get_redis_status(redis)
+    logger.info(redis_msg)
+
+    status_msg = f"""{open_ai_status} 
+{redis_msg}
+"""
+    await context.bot.send_message(chat_id=chat_id, text=status_msg)
+
+
+async def _get_redis_status(redis) -> str:
+    is_connected = redis.ping()
+    connection_info = redis.client().connection
+    redis_info = redis.info()
+    keys_to_extract = ['redis_version', 'uptime_in_days', 'listener0', 'used_memory_human']
+    condensed_redis_info = {
+        key: redis_info[key]
+        for key in keys_to_extract
+        if key in redis_info
+    }
+    redis_msg = f"""Redis
+Bot connected to Redis: {is_connected}
+Redis connection: {connection_info}
+Redis info: {json.dumps(condensed_redis_info, indent=4)}
+    """
+    return redis_msg
+
+
+async def _get_open_ai_status(ai_client: OpenAI) -> str:
+    open_ai_response = ping_openai(ai_client)
+    open_ai_msg = f"""OpenAI 
+Status: {open_ai_response}
+    """
+    return open_ai_msg
 
 
 def get_application():
@@ -308,7 +380,10 @@ def get_application():
         .token(telegram_token) \
         .build()
 
-    handlers = get_handlers()
+    handlers = [
+        *get_handlers(),
+        *get_admin_handlers()
+    ]
 
     for handler in handlers:
         application.add_handler(handler)
@@ -324,6 +399,13 @@ def get_handlers() -> list[BaseHandler]:
         CommandHandler(HELP_COMMAND, help_handler),
         CommandHandler(WHISPER_COMMAND, whisper_handler),
         MessageHandler(filters.TEXT & (~filters.COMMAND), listen_for_messages_handler)
+    ]
+
+
+def get_admin_handlers() -> list[BaseHandler]:
+    return [
+        CommandHandler(REPLAY_COMMAND, replay_messages_handler),
+        CommandHandler(STATUS_COMMAND, status_handler),
     ]
 
 
