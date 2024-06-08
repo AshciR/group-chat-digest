@@ -203,33 +203,6 @@ def _summarize_messages_as_bullet_points(formatted_messages: str) -> str:
     return formatted_bullet_points
 
 
-async def _replay_messages_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    """
-    Command that replays the messages in storage
-    Used for debugging purposes. DO NOT USE IN PRODUCTION!
-    @rtype: object
-    """
-
-    chat_id = update.effective_chat.id
-
-    if not is_whitelisted(chat_id):
-        logger.info(f'chat id: {chat_id} attempted to use the bot but was not whitelisted')
-        await context.bot.send_message(chat_id=chat_id, text="You are not currently allowed to use this bot")
-        return
-
-    redis_client = get_redis_client()
-
-    if not chat_exists(redis_client, chat_id):
-        await context.bot.send_message(chat_id=chat_id, text="There are no message to replay")
-
-    else:
-        logger.debug(f'Replaying for chat id {chat_id} currently in storage.')
-
-        messages = get_latest_n_messages(redis_client, chat_id)
-        for message in messages[::-1]:
-            await context.bot.send_message(chat_id=chat_id, text=message.content)
-
-
 async def listen_for_messages_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
     """
     # Command that listens for messages and stores them.
@@ -290,6 +263,36 @@ However, the maximum number of messages I can handle is {MAX_MESSAGE_STORAGE}.
 Happy chatting! 🗣️❤️
 """
     await context.bot.send_message(chat_id=chat_id, text=help_text)
+
+
+#####################################################################
+# The following handlers are only for development and admin purposes!
+#####################################################################
+async def replay_messages_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    """
+    Command that replays the messages in storage
+    Used for debugging purposes. DO NOT USE IN PRODUCTION!
+    @rtype: object
+    """
+
+    chat_id = update.effective_chat.id
+
+    if not is_whitelisted(chat_id):
+        logger.info(f'chat id: {chat_id} attempted to use the bot but was not whitelisted')
+        await context.bot.send_message(chat_id=chat_id, text="You are not currently allowed to use this bot")
+        return
+
+    redis_client = get_redis_client()
+
+    if not chat_exists(redis_client, chat_id):
+        await context.bot.send_message(chat_id=chat_id, text="There are no message to replay")
+
+    else:
+        logger.debug(f'Replaying for chat id {chat_id} currently in storage.')
+
+        messages = get_latest_n_messages(redis_client, chat_id)
+        for message in messages[::-1]:
+            await context.bot.send_message(chat_id=chat_id, text=message.content)
 
 
 def get_application():
