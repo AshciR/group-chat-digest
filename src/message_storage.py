@@ -4,7 +4,7 @@ import os
 from dataclasses import dataclass, asdict
 
 from redis import Redis
-from redis.cluster import RedisCluster
+from redis.cluster import RedisCluster, ClusterNode
 from telegram import Update
 
 from utils import str_to_bool
@@ -24,15 +24,20 @@ def configure_message_storage() -> bool:
         use_tls = str_to_bool((os.getenv('REDIS_USE_TLS', False)))  # We have to use TLS with Elasticache
         timeout = int(os.getenv('REDIS_TIMEOUT', 60))
 
-        logger.info(f"Connecting to Redis at: {host}:{port}")
-        logger.info(f"Redis DB: {db}, TLS: {use_tls}, Timeout:{timeout}")
+        global redis_client_singleton
 
         local_development = str_to_bool(os.getenv('LOCAL', False))
-        global redis_client_singleton
         if local_development:
+            logger.info(f"Connecting to Redis at: {host}:{port}")
+            logger.info(f"Redis DB: {db}, TLS: {use_tls}, Timeout:{timeout}")
             redis_client_singleton = Redis(host=host, port=port, db=db, ssl=use_tls, socket_timeout=timeout)
         else:
-            redis_client_singleton = RedisCluster(host=host, port=port)
+            logger.info(f"Connecting to Redis cluster")
+            nodes = [ClusterNode(host, port)]
+            logger.info(f"Cluster Nodes: {nodes}")
+            redis_client_singleton = RedisCluster(
+                startup_nodes=nodes
+            )
 
         return redis_client_singleton.ping()
 
