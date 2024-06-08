@@ -30,7 +30,7 @@ if __name__ == '__main__':
         level=logging.INFO
     )
 
-    debug_mode = str_to_bool(os.getenv('DEBUG', False))
+    debug_mode = str_to_bool(os.getenv('LOCAL', False))
 
     if debug_mode:
         logging.getLogger('telegram_bot').setLevel(logging.DEBUG)

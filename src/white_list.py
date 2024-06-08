@@ -5,7 +5,8 @@ def get_white_list() -> list[int]:
         -1002088317098,  # Girls chat
         -4257039919,     # Test group
         -1001598674948,  # Outside 4ever
-        -4170925867,     # CNS
+        -4170925867,     # Staging Chat
+        -4239122711,     # Dev Chat
         170626720,       # Richie
         320338590,       # Alrick
     ]
