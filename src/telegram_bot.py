@@ -19,7 +19,7 @@ from message_storage import (Message,
                              DEFAULT_MESSAGE_STORAGE, configure_message_storage, MAX_MESSAGE_STORAGE)
 from openai_utils import get_ai_client, summarize_messages_as_bullet_points, summarize_messages_as_paragraph, \
     ping_openai
-from white_list import is_whitelisted, is_admin, get_admin_list
+from white_list import is_whitelisted, is_admin, get_admin_user_list
 
 logger = logging.getLogger(__name__)
 
@@ -281,19 +281,11 @@ async def replay_messages_handler(update: Update, context: ContextTypes.DEFAULT_
     @rtype: object
     """
 
-    chat_id = update.effective_chat.id
-
-    if not is_admin(chat_id):
-        logger.info(f'chat id: {chat_id} attempted to use the bot but was not an admin')
-        await context.bot.send_message(chat_id=chat_id, text="You are not currently allowed to use this bot")
-
-        for admin_chat_id in get_admin_list():
-            msg = f"User: {update.effective_user.full_name} attempted to use an admin command. Their chat_id is {chat_id}"
-            await context.bot.send_message(chat_id=admin_chat_id, text=msg)
-
+    if not _is_admin_user(update, context):
         return
 
     redis_client = get_redis_client()
+    chat_id = update.effective_chat.id
 
     if not chat_exists(redis_client, chat_id):
         await context.bot.send_message(chat_id=chat_id, text="There are no message to replay")
@@ -313,17 +305,10 @@ async def status_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
     @rtype: object
     """
 
-    chat_id = update.effective_chat.id
-
-    if not is_admin(chat_id):
-        logger.info(f'chat id: {chat_id} attempted to use the bot but was not an admin')
-        await context.bot.send_message(chat_id=chat_id, text="You are not currently allowed to use this bot")
-
-        for admin_chat_id in get_admin_list():
-            msg = f"User: {update.effective_user.full_name} attempted to use an admin command. Their chat_id is {chat_id}"
-            await context.bot.send_message(chat_id=admin_chat_id, text=msg)
-
+    if not _is_admin_user(update, context):
         return
+
+    chat_id = update.effective_chat.id
 
     # Open AI
     ai_client = get_ai_client()
@@ -339,6 +324,23 @@ async def status_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
 {redis_msg}
 """
     await context.bot.send_message(chat_id=chat_id, text=status_msg)
+
+
+async def _is_admin_user(update: Update, context: ContextTypes.DEFAULT_TYPE) -> bool:
+    user_id = update.effective_user.id
+    chat_id = update.effective_chat.id
+
+    if not is_admin(user_id):
+        logger.info(f'user id: {user_id} attempted to use the bot but was not an admin')
+        await context.bot.send_message(chat_id=chat_id, text="You are not allowed to access this command")
+
+        for admin_chat_id in get_admin_user_list():
+            msg = f"User: {update.effective_user.full_name} attempted to use an admin command. Details user_id: {user_id} chat_id: {chat_id}"
+            await context.bot.send_message(chat_id=admin_chat_id, text=msg)
+
+        return False
+    else:
+        return True
 
 
 async def _get_redis_status(redis) -> str:
