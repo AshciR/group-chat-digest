@@ -17,18 +17,20 @@ MAX_MESSAGE_STORAGE = 200
 def configure_message_storage() -> bool:
 
     try:
-        global redis_client_singleton
         host = os.getenv('REDIS_HOST', "localhost")
         port = os.getenv('REDIS_PORT', 6379)
         db = os.getenv('REDIS_DB', 0)
         use_tls = str_to_bool((os.getenv('REDIS_USE_TLS', False)))  # We have to use TLS with Elasticache
         timeout = int(os.getenv('REDIS_TIMEOUT', 60))
 
+        global redis_client_singleton
+
         logger.info(f"Connecting to Redis at: {host}:{port}")
         logger.info(f"Redis DB: {db}, TLS: {use_tls}, Timeout:{timeout}")
-
         redis_client_singleton = Redis(host=host, port=port, db=db, ssl=use_tls, socket_timeout=timeout)
+
         return redis_client_singleton.ping()
+
     except TimeoutError:
         logger.exception("Timed out while connecting to Redis.")
         return False
@@ -78,6 +80,7 @@ def store_message(redis_client: Redis,
     redis_client.lpush(chat_key, serialized_message)
     # Trim the list to only keep the latest 200 messages
     redis_client.ltrim(chat_key, 0, MAX_MESSAGE_STORAGE - 1)
+    logger.debug(f"Stored {serialized_message} into the cache at key {chat_key}")
 
     # Return the current number of messages in the list
     return redis_client.llen(chat_key)

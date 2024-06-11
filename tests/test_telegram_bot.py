@@ -1,13 +1,14 @@
 import pytest
-from message_storage import Message
 from telegram.ext import CommandHandler, MessageHandler
+
+from message_storage import Message
 from telegram_bot import format_message_for_openai, get_handlers, summary_handler, gist_handler, help_handler, \
-    listen_for_messages_handler, whisper_handler, start_handler
+    listen_for_messages_handler, whisper_handler, start_handler, get_admin_handlers, replay_messages_handler, \
+    status_handler
 
 
 @pytest.mark.asyncio
 async def test_format_message_for_openai():
-
     # Given: We have messages
     messages = [
         Message(message_id=1, content="Hello", owner_id=1, owner_name="Alice", created_at="2023-05-14T12:00:00Z"),
@@ -54,4 +55,16 @@ def test_get_handlers():
     assert handlers[5].callback == listen_for_messages_handler
 
 
+def test_get_admin_handlers():
+    handlers = get_admin_handlers()
 
+    assert len(handlers) == 2, "Expected 2 handlers"
+
+    # Test CommandHandlers
+    assert isinstance(handlers[0], CommandHandler)
+    assert handlers[0].commands == frozenset({'replay'})
+    assert handlers[0].callback == replay_messages_handler
+
+    assert isinstance(handlers[1], CommandHandler)
+    assert handlers[1].commands == frozenset({'status'})
+    assert handlers[1].callback == status_handler

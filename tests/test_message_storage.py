@@ -7,7 +7,6 @@ from fakeredis import FakeRedis
 from message_storage import (
     Message,
     store_message,
-    DEFAULT_MESSAGE_STORAGE,
     chat_exists,
     get_latest_n_messages,
     configure_message_storage, MAX_MESSAGE_STORAGE

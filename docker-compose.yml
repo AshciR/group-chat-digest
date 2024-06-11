@@ -4,11 +4,12 @@ services:
   app:
     container_name: chat-nuff-bot
     environment:
+      - LOCAL=${LOCAL}
       - REDIS_HOST=redis
       - REDIS_PORT=${REDIS_PORT}
-      - REDIS_DB=0
-      - REDIS_USE_TLS=False # No TLS during local dev
-      - REDIS_TIMEOUT=60 # seconds
+      - REDIS_DB=${REDIS_DB}
+      - REDIS_USE_TLS=${REDIS_USE_TLS} # No TLS during local dev
+      - REDIS_TIMEOUT=${REDIS_TIMEOUT} # seconds
       - TELEGRAM_API_KEY=${TELEGRAM_API_KEY}
       - OPENAI_API_KEY=${OPENAI_API_KEY}
     build:
