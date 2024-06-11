@@ -221,19 +221,32 @@ async def listen_for_messages_handler(update: Update, context: ContextTypes.DEFA
         logger.info(f'chat id: {chat_id} attempted to use the bot but was not whitelisted')
         return
 
-    message_owner = Message.convert_update_to_owner(update)
-    message = Message(
-        message_id=update.message.id,
-        owner_id=update.message.from_user.id,
-        content=update.message.text,
-        owner_name=message_owner,
-        created_at=update.message.date.isoformat()
-    )
+    # TODO: Add function that will check update and add spoiler flag
+    # in addition to replacing the original content with ^ wrappers if needed
+    message = _create_message_from_update(update)
+
+    # message_owner = Message.convert_update_to_owner(update)
+    # message = Message(
+    #     message_id=update.message.id,
+    #     owner_id=update.message.from_user.id,
+    #     content=update.message.text,
+    #     owner_name=message_owner,
+    #     created_at=update.message.date.isoformat()
+    # )
     logger.debug(f'Got message: {message} from chat id: {chat_id}')
 
     redis_client = get_redis_client()
     count = store_message(redis_client, chat_id, message)
     logger.debug(f'Cache size: {count} from chat id: {chat_id}')
+
+
+def _create_message_from_update(update: Update) -> Message:
+    message_owner = Message.convert_update_to_owner(update)
+    # Add logic to
+    # - [ ]  Check if any of the messages have spoilers
+    # - [ ]  Replace ^ from actual messages with an *
+    # - [ ]  Wrap the spoiler content with ^
+    return None
 
 
 async def help_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
