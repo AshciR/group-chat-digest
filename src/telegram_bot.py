@@ -251,12 +251,8 @@ def create_message_from_update(update: Update) -> Message:
     ) if effective_message.entities else False
 
     if has_spoiler:
-        # Replacing the carrot symbol with asteriks b/c
-        # we're using the carrot to mark the start and end of spoiler content.
-        # We chose the carrot symbol b/c the likelihood of a message container it was low.
-        modified_content = effective_message.text.replace("^", "*")
+        modified_content = modify_content_for_spoilers(effective_message.text)
 
-        # - [ ]  Wrap the spoiler content with ^
         return Message(
             message_id=update.message.id,
             owner_id=update.message.from_user.id,
@@ -275,6 +271,17 @@ def create_message_from_update(update: Update) -> Message:
         created_at=update.message.date.isoformat(),
         has_spoilers=has_spoiler
     )
+
+
+def modify_content_for_spoilers(text: str) -> str:
+    # Replacing the carrot symbol with asteriks b/c
+    # we're using the carrot to mark the start and end of spoiler content.
+    # We chose the carrot symbol b/c the likelihood of a message container it was low.
+    cleaned_message = text.replace("^", "*")
+
+    # - [ ]  Wrap the spoiler content with ^
+
+    return ""
 
 
 async def help_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
