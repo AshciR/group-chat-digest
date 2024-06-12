@@ -223,7 +223,7 @@ async def listen_for_messages_handler(update: Update, context: ContextTypes.DEFA
 
     # TODO: Add function that will check update and add spoiler flag
     # in addition to replacing the original content with ^ wrappers if needed
-    message = _create_message_from_update(update)
+    message = create_message_from_update(update)
 
     # message_owner = Message.convert_update_to_owner(update)
     # message = Message(
@@ -240,7 +240,7 @@ async def listen_for_messages_handler(update: Update, context: ContextTypes.DEFA
     logger.debug(f'Cache size: {count} from chat id: {chat_id}')
 
 
-def _create_message_from_update(update: Update) -> Message:
+def create_message_from_update(update: Update) -> Message:
     message_owner = Message.convert_update_to_owner(update)
     # Add logic to
     # - [ ]  Check if any of the messages have spoilers

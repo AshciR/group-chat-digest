@@ -47,7 +47,7 @@ class Message:
     owner_id: int
     owner_name: str
     created_at: str
-    # TODO: Add hasSpoiler field
+    has_spoilers: bool = False
 
     @staticmethod
     def convert_update_to_owner(update: Update):
