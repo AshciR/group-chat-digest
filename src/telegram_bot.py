@@ -7,7 +7,7 @@ from typing import Tuple
 
 from dotenv import load_dotenv
 from openai import OpenAI
-from telegram import Update
+from telegram import Update, MessageEntity
 from telegram.constants import MessageEntityType
 from telegram.error import Forbidden
 from telegram.ext import ApplicationBuilder, ContextTypes, CommandHandler, filters, MessageHandler
@@ -246,13 +246,15 @@ def create_message_from_update(update: Update) -> Message:
     effective_message = update.effective_message
 
     # Check if the message has spoilers
-    has_spoiler = any(
-        entity.type == MessageEntityType.SPOILER
+    spoiler_entities: list[MessageEntity] = [
+        entity
         for entity in effective_message.entities
-    ) if effective_message.entities else False
+        if entity.type == MessageEntityType.SPOILER
+    ]
+    has_spoiler = bool(spoiler_entities)
 
     if has_spoiler:
-        start_indices_and_lengths = []
+        start_indices_and_lengths = [(entity.offset, entity.length) for entity in spoiler_entities]
         modified_content = modify_content_for_spoilers(effective_message.text, start_indices_and_lengths)
 
         return Message(
@@ -291,18 +293,19 @@ def modify_content_for_spoilers(text: str, start_indices_and_lengths: list[Tuple
     @param start_indices_and_lengths: a list of the start indexes and length of spoilt content
     @return: the modified text wrapped by "^"
     """
-    # Replacing the carrot symbol with asteriks b/c
-    # we're using the carrot to mark the start and end of spoiler content.
+    # Replace the carrot symbol with '*' b/c we're using the carrot
+    # to mark the start and end of spoiler content.
     # We chose the carrot symbol b/c the likelihood of a message container it was low.
     cleaned_message = text.replace("^", "*")
 
     # Wrap the spoiler content with ^
-    modified_content = _wrap_spoiler_content(cleaned_message, start_indices_and_lengths)
+    wrapper_char = "^"
+    modified_content = _wrap_spoiler_content(cleaned_message, start_indices_and_lengths, wrapper_char)
 
     return modified_content
 
 
-def _wrap_spoiler_content(text: str, start_indices_and_lengths: list[Tuple[int, int]]) -> str:
+def _wrap_spoiler_content(text: str, start_indices_and_lengths: list[Tuple[int, int]], wrapper_char="^") -> str:
     # Initialize an empty list to hold the parts of the modified string
     modified_parts = []
     previous_end = 0
@@ -313,7 +316,7 @@ def _wrap_spoiler_content(text: str, start_indices_and_lengths: list[Tuple[int, 
         # Add the part of the string before the current word
         modified_parts.append(text[previous_end:start])
         # Add the current word wrapped with "^"
-        modified_parts.append("^" + text[start:end] + "^")
+        modified_parts.append(wrapper_char + text[start:end] + wrapper_char)
         # Update the previous_end to the end of the current word
         previous_end = end
 
