@@ -7,6 +7,7 @@ import sys
 from dotenv import load_dotenv
 from openai import OpenAI
 from telegram import Update
+from telegram.constants import MessageEntityType
 from telegram.error import Forbidden
 from telegram.ext import ApplicationBuilder, ContextTypes, CommandHandler, filters, MessageHandler
 from telegram.ext._application import Application, BaseHandler
@@ -241,12 +242,39 @@ async def listen_for_messages_handler(update: Update, context: ContextTypes.DEFA
 
 
 def create_message_from_update(update: Update) -> Message:
-    message_owner = Message.convert_update_to_owner(update)
-    # Add logic to
-    # - [ ]  Check if any of the messages have spoilers
-    # - [ ]  Replace ^ from actual messages with an *
-    # - [ ]  Wrap the spoiler content with ^
-    return None
+    effective_message = update.effective_message
+
+    # Check if the message has spoilers
+    has_spoiler = any(
+        entity.type == MessageEntityType.SPOILER
+        for entity in effective_message.entities
+    ) if effective_message.entities else False
+
+    if has_spoiler:
+        # Replacing the carrot symbol with asteriks b/c
+        # we're using the carrot to mark the start and end of spoiler content.
+        # We chose the carrot symbol b/c the likelihood of a message container it was low.
+        modified_content = effective_message.text.replace("^", "*")
+
+        # - [ ]  Wrap the spoiler content with ^
+        return Message(
+            message_id=update.message.id,
+            owner_id=update.message.from_user.id,
+            content=modified_content,
+            owner_name=Message.convert_update_to_owner(update),
+            created_at=update.message.date.isoformat(),
+            has_spoilers=has_spoiler
+        )
+
+    # Return the unmodified message
+    return Message(
+        message_id=update.message.id,
+        owner_id=update.message.from_user.id,
+        content=update.message.text,
+        owner_name=(Message.convert_update_to_owner(update)),
+        created_at=update.message.date.isoformat(),
+        has_spoilers=has_spoiler
+    )
 
 
 async def help_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
@@ -306,9 +334,16 @@ async def replay_messages_handler(update: Update, context: ContextTypes.DEFAULT_
     else:
         logger.info(f'Replaying for chat id {chat_id} currently in storage.')
 
-        messages = get_latest_n_messages(redis_client, chat_id)
+        # We're limiting the replay to 10 messages b/c Telegram has rate limiting in place
+        # for the context.bot.send_message() function
+        default_replay_arg = 10
+        replay_arg = await _determine_number_of_messages_from_message_context(context)
+        number_of_msg_to_replay = default_replay_arg if replay_arg == DEFAULT_MESSAGE_STORAGE else replay_arg
+
+        messages = get_latest_n_messages(redis_client, chat_id, number_of_msg_to_replay)
         for message in messages[::-1]:
             await context.bot.send_message(chat_id=chat_id, text=message.content)
+            await asyncio.sleep(0.5)  # Have to sleep a bit to prevent rate limits
 
 
 async def status_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
