@@ -1,10 +1,12 @@
+from typing import Tuple
+
 import pytest
 from telegram.ext import CommandHandler, MessageHandler
 
 from message_storage import Message
 from telegram_bot import format_message_for_openai, get_handlers, summary_handler, gist_handler, help_handler, \
     listen_for_messages_handler, whisper_handler, start_handler, get_admin_handlers, replay_messages_handler, \
-    status_handler
+    status_handler, modify_content_for_spoilers
 
 
 @pytest.mark.asyncio
@@ -68,3 +70,32 @@ def test_get_admin_handlers():
     assert isinstance(handlers[1], CommandHandler)
     assert handlers[1].commands == frozenset({'status'})
     assert handlers[1].callback == status_handler
+
+
+@pytest.mark.parametrize(
+    "text, start_indices_and_lengths, expected",
+    [
+        # Single spoiler
+        ("I have apples, and I have bananas, yay", [(7, 6)], "I have ^apples^, and I have bananas, yay"),
+        # Replace ^ with *
+        ("I ^am a spoiler", [(3, 2)], "I *^am^ a spoiler"),
+        # No spoilers
+        ("No spoilers here", [], "No spoilers here"),
+        # Mixed ^ and Spoilers
+        ("I am ^not^ a spoiler", [(5, 3)], "I am *not* ^a s^poiler"),
+        # Multiple spoilers
+        ("Multiple spoilers here", [(0, 8), (17, 4)], "^Multiple^ spoilers ^here^"),
+        # Multiple spoilers mixed with *
+        ("Multiple ^spoilers^ here", [(0, 8), (18, 4)], "^Multiple*^ ^spoilers^ ^here^"),
+        # Edge cases
+        ("Edge cases", [(0, 4), (5, 5)], "^Edge^ ^cases^"),
+    ]
+)
+def test_modify_content_for_spoilers(text: str, start_indices_and_lengths: list[Tuple[int, int]], expected: str):
+    # Given: We have text content from messages
+
+    # When: We modify it
+    modified_content = modify_content_for_spoilers(text, start_indices_and_lengths)
+
+    # Then: Then it should be modified corrected
+    assert modified_content == expected
