@@ -3,6 +3,7 @@ import json
 import logging
 import os
 import sys
+from typing import Tuple
 
 from dotenv import load_dotenv
 from openai import OpenAI
@@ -251,7 +252,8 @@ def create_message_from_update(update: Update) -> Message:
     ) if effective_message.entities else False
 
     if has_spoiler:
-        modified_content = modify_content_for_spoilers(effective_message.text)
+        start_indices_and_lengths = []
+        modified_content = modify_content_for_spoilers(effective_message.text, start_indices_and_lengths)
 
         return Message(
             message_id=update.message.id,
@@ -273,15 +275,53 @@ def create_message_from_update(update: Update) -> Message:
     )
 
 
-def modify_content_for_spoilers(text: str) -> str:
+def modify_content_for_spoilers(text: str, start_indices_and_lengths: list[Tuple[int, int]]) -> str:
+    """
+    Converts the telegram message text into a format we use to display spoilers.
+    Spoiler texts will be wrapped by the "^" symbol. E.g.
+    "I am spoiler text" is converted to
+    "I am ^spoiler^ text"
+
+    Also note, that if the original text has "^" characters in it.
+    They'll be replaced by "*". E.g.
+    "I ^am spoiler text" is converted to
+    "I *am spoiler text"
+
+    @param text: the original text
+    @param start_indices_and_lengths: a list of the start indexes and length of spoilt content
+    @return: the modified text wrapped by "^"
+    """
     # Replacing the carrot symbol with asteriks b/c
     # we're using the carrot to mark the start and end of spoiler content.
     # We chose the carrot symbol b/c the likelihood of a message container it was low.
     cleaned_message = text.replace("^", "*")
 
-    # - [ ]  Wrap the spoiler content with ^
+    # Wrap the spoiler content with ^
+    modified_content = _wrap_spoiler_content(cleaned_message, start_indices_and_lengths)
 
-    return ""
+    return modified_content
+
+
+def _wrap_spoiler_content(text: str, start_indices_and_lengths: list[Tuple[int, int]]) -> str:
+    # Initialize an empty list to hold the parts of the modified string
+    modified_parts = []
+    previous_end = 0
+
+    # Iterate through the indices and lengths and wrap the specified words with "^"
+    for start, length in start_indices_and_lengths:
+        end = start + length
+        # Add the part of the string before the current word
+        modified_parts.append(text[previous_end:start])
+        # Add the current word wrapped with "^"
+        modified_parts.append("^" + text[start:end] + "^")
+        # Update the previous_end to the end of the current word
+        previous_end = end
+
+    # Add the remaining part of the string after the last word
+    modified_parts.append(text[previous_end:])
+
+    # Join all parts into the final modified string
+    return ''.join(modified_parts)
 
 
 async def help_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
