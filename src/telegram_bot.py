@@ -20,7 +20,7 @@ from message_storage import (Message,
                              get_latest_n_messages,
                              DEFAULT_MESSAGE_STORAGE, configure_message_storage, MAX_MESSAGE_STORAGE, SpoilerRange)
 from openai_utils import get_ai_client, summarize_messages_as_bullet_points, summarize_messages_as_paragraph, \
-    ping_openai
+    ping_openai, summarize_messages_with_spoilers_as_paragraph
 from white_list import is_whitelisted, is_admin, get_admin_user_list
 
 logger = logging.getLogger(__name__)
@@ -90,14 +90,21 @@ async def summary_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
         messages.reverse()
 
         # Send N messages to OpenAI
-        prompt_message_schema = await format_message_for_openai(messages)
-        summarized_msg = _summarize_messages_as_paragraph(prompt_message_schema)
+        summarized_msg = await _summarize_messages_as_paragraph(messages)
         await context.bot.send_message(chat_id=chat_id, text=summarized_msg)
 
 
-def _summarize_messages_as_paragraph(formatted_messages: str) -> str:
+async def _summarize_messages_as_paragraph(messages: list[Message]) -> str:
     client = get_ai_client()
-    summary = summarize_messages_as_paragraph(client, formatted_messages)
+
+    formatted_messages = await format_message_for_openai(messages)
+    has_spoilers = any(message.has_spoilers for message in messages)
+
+    if has_spoilers:
+        summary = summarize_messages_with_spoilers_as_paragraph(client, formatted_messages)
+    else:
+        summary = summarize_messages_as_paragraph(client, formatted_messages)
+
     logger.debug(summary)
 
     return summary
