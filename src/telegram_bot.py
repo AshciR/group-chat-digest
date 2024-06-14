@@ -2,6 +2,7 @@ import asyncio
 import json
 import logging
 import os
+import re
 import sys
 from typing import Tuple
 
@@ -101,7 +102,8 @@ async def _summarize_messages_as_paragraph(messages: list[Message]) -> str:
     has_spoilers = any(message.has_spoilers for message in messages)
 
     if has_spoilers:
-        summary = summarize_messages_with_spoilers_as_paragraph(client, formatted_messages)
+        wrapped_summary = summarize_messages_with_spoilers_as_paragraph(client, formatted_messages)
+        summary = unwrap_spoiler_content(wrapped_summary)
     else:
         summary = summarize_messages_as_paragraph(client, formatted_messages)
 
@@ -210,7 +212,10 @@ async def _summarize_messages_as_bullet_points(messages: list[Message]) -> str:
     has_spoilers = any(message.has_spoilers for message in messages)
 
     if has_spoilers:
-        summary = summarize_messages_with_spoilers_as_bullet_points(client, formatted_messages)
+        # The summary will have words surrounded by '^'.
+        # We need to remove the '^' and generate spoiler ranges
+        wrapped_summary = summarize_messages_with_spoilers_as_bullet_points(client, formatted_messages)
+        summary = unwrap_spoiler_content(wrapped_summary)
     else:
         summary = summarize_messages_as_bullet_points(client, formatted_messages)
 
@@ -221,6 +226,49 @@ async def _summarize_messages_as_bullet_points(messages: list[Message]) -> str:
     logger.debug(formatted_bullet_points)
 
     return formatted_bullet_points
+
+
+def unwrap_spoiler_content(wrapped_summary: str) -> Tuple[str, list[SpoilerRange]]:
+    """
+    Unwraps spoiler content from a wrapped summary.
+
+    @param wrapped_summary: The text with spoilers wrapped in '^'
+    @return: A tuple containing the unwrapped text and a list of SpoilerRange objects
+    """
+    spoiler_ranges = []
+    unwrapped_text = []
+    current_index = 0
+
+    # Regular expression to find text wrapped in '^'
+    pattern = re.compile(r'\^(.*?)\^')
+
+    for match in pattern.finditer(wrapped_summary):
+        start, end = match.span()
+        spoiler_content = match.group(1)
+
+        # Add text before the spoiler
+        unwrapped_text.append(wrapped_summary[current_index:start])
+
+        # Calculate the start index and length of the spoiler content
+        start_index = len(''.join(unwrapped_text))
+        length = len(spoiler_content)
+
+        # Append the spoiler content to the unwrapped text
+        unwrapped_text.append(spoiler_content)
+
+        # Add the spoiler range to the list
+        spoiler_ranges.append(SpoilerRange(start_index=start_index, length=length))
+
+        # Update the current index to the end of the current match
+        current_index = end
+
+    # Add any remaining text after the last spoiler
+    unwrapped_text.append(wrapped_summary[current_index:])
+
+    # Join all parts into the final unwrapped text
+    final_text = ''.join(unwrapped_text)
+
+    return final_text, spoiler_ranges
 
 
 async def listen_for_messages_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):

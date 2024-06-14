@@ -6,7 +6,7 @@ from telegram.ext import CommandHandler, MessageHandler
 from message_storage import Message, SpoilerRange
 from telegram_bot import format_message_for_openai, get_handlers, summary_handler, gist_handler, help_handler, \
     listen_for_messages_handler, whisper_handler, start_handler, get_admin_handlers, replay_messages_handler, \
-    status_handler, modify_content_for_spoilers
+    status_handler, modify_content_for_spoilers, unwrap_spoiler_content
 
 
 @pytest.mark.asyncio
@@ -101,3 +101,35 @@ def test_modify_content_for_spoilers(text: str, ranges, expected: str):
 
     # Then: Then it should be modified corrected
     assert modified_content == expected
+
+
+@pytest.mark.parametrize("wrapped_summary, expected_text, expected_ranges", [
+    ("This is a ^spoiler^ text example.",
+     "This is a spoiler text example.",
+     [SpoilerRange(start_index=10, length=7)]),
+
+    ("This is a ^spoiler^ text example with multiple ^spoilers^ in it.",
+     "This is a spoiler text example with multiple spoilers in it.",
+     [SpoilerRange(start_index=10, length=7), SpoilerRange(start_index=45, length=8)]),
+
+    ("No spoilers here.",
+     "No spoilers here.",
+     []),
+
+    ("^One big spoiler^",
+     "One big spoiler",
+     [SpoilerRange(start_index=0, length=15)]),
+
+    ("^Spoilers^ at the start and the ^end^",
+     "Spoilers at the start and the end",
+     [SpoilerRange(start_index=0, length=8), SpoilerRange(start_index=30, length=3)])
+])
+def test_unwrap_spoiler_content(wrapped_summary, expected_text, expected_ranges):
+    # Given: We have spoiler text content from messages
+
+    # When: We unwrap it
+    unwrapped_text, spoiler_ranges = unwrap_spoiler_content(wrapped_summary)
+
+    # Then: Then it should be unwrapped correctly with the spoiler ranges
+    assert unwrapped_text == expected_text
+    assert spoiler_ranges == expected_ranges
