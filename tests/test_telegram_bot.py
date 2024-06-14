@@ -3,7 +3,7 @@ from typing import Tuple
 import pytest
 from telegram.ext import CommandHandler, MessageHandler
 
-from message_storage import Message
+from message_storage import Message, SpoilerRange
 from telegram_bot import format_message_for_openai, get_handlers, summary_handler, gist_handler, help_handler, \
     listen_for_messages_handler, whisper_handler, start_handler, get_admin_handlers, replay_messages_handler, \
     status_handler, modify_content_for_spoilers
@@ -73,29 +73,31 @@ def test_get_admin_handlers():
 
 
 @pytest.mark.parametrize(
-    "text, start_indices_and_lengths, expected",
+    "text, ranges, expected",
     [
         # Single spoiler
-        ("I have apples, and I have bananas, yay", [(7, 6)], "I have ^apples^, and I have bananas, yay"),
+        ("I have apples, and I have bananas, yay", [SpoilerRange(7, 6)], "I have ^apples^, and I have bananas, yay"),
         # Replace ^ with *
-        ("I ^am a spoiler", [(3, 2)], "I *^am^ a spoiler"),
+        ("I ^am a spoiler", [SpoilerRange(3, 2)], "I *^am^ a spoiler"),
         # No spoilers
         ("No spoilers here", [], "No spoilers here"),
         # Mixed ^ and Spoilers
-        ("I am ^not^ a spoiler", [(11, 3)], "I am *not* ^a s^poiler"),
+        ("I am ^not^ a spoiler", [SpoilerRange(11, 3)], "I am *not* ^a s^poiler"),
         # Multiple spoilers
-        ("Multiple spoilers here", [(0, 8), (18, 4)], "^Multiple^ spoilers ^here^"),
+        ("Multiple spoilers here", [SpoilerRange(0, 8), SpoilerRange(18, 4)], "^Multiple^ spoilers ^here^"),
+        # Multiple spoilers but ranges are not in correct order
+        ("Multiple spoilers here", [SpoilerRange(18, 4), SpoilerRange(0, 8)], "^Multiple^ spoilers ^here^"),
         # Multiple spoilers mixed with *
-        ("Multiple ^spoilers^ here", [(0, 8), (20, 4)], "^Multiple^ *spoilers* ^here^"),
+        ("Multiple ^spoilers^ here", [SpoilerRange(0, 8), SpoilerRange(20, 4)], "^Multiple^ *spoilers* ^here^"),
         # Edge cases
-        ("Edge cases", [(0, 4), (5, 5)], "^Edge^ ^cases^"),
+        ("Edge cases", [SpoilerRange(0, 4), SpoilerRange(5, 5)], "^Edge^ ^cases^"),
     ]
 )
-def test_modify_content_for_spoilers(text: str, start_indices_and_lengths: list[Tuple[int, int]], expected: str):
+def test_modify_content_for_spoilers(text: str, ranges, expected: str):
     # Given: We have text content from messages
 
     # When: We modify it
-    modified_content = modify_content_for_spoilers(text, start_indices_and_lengths)
+    modified_content = modify_content_for_spoilers(text, ranges)
 
     # Then: Then it should be modified corrected
     assert modified_content == expected

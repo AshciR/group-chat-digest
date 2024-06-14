@@ -18,7 +18,7 @@ from message_storage import (Message,
                              store_message,
                              chat_exists,
                              get_latest_n_messages,
-                             DEFAULT_MESSAGE_STORAGE, configure_message_storage, MAX_MESSAGE_STORAGE)
+                             DEFAULT_MESSAGE_STORAGE, configure_message_storage, MAX_MESSAGE_STORAGE, SpoilerRange)
 from openai_utils import get_ai_client, summarize_messages_as_bullet_points, summarize_messages_as_paragraph, \
     ping_openai
 from white_list import is_whitelisted, is_admin, get_admin_user_list
@@ -254,7 +254,7 @@ def create_message_from_update(update: Update) -> Message:
     has_spoiler = bool(spoiler_entities)
 
     if has_spoiler:
-        start_indices_and_lengths = [(entity.offset, entity.length) for entity in spoiler_entities]
+        start_indices_and_lengths = [SpoilerRange(entity.offset, entity.length) for entity in spoiler_entities]
         modified_content = modify_content_for_spoilers(effective_message.text, start_indices_and_lengths)
 
         return Message(
@@ -277,7 +277,7 @@ def create_message_from_update(update: Update) -> Message:
     )
 
 
-def modify_content_for_spoilers(text: str, start_indices_and_lengths: list[Tuple[int, int]]) -> str:
+def modify_content_for_spoilers(text: str, start_indices_and_lengths: list[SpoilerRange]) -> str:
     """
     Converts the telegram message text into a format we use to display spoilers.
     Spoiler texts will be wrapped by the "^" symbol. E.g.
@@ -305,18 +305,21 @@ def modify_content_for_spoilers(text: str, start_indices_and_lengths: list[Tuple
     return modified_content
 
 
-def _wrap_spoiler_content(text: str, start_indices_and_lengths: list[Tuple[int, int]], wrapper_char="^") -> str:
+def _wrap_spoiler_content(text: str, ranges: list[SpoilerRange], wrapper_char="^") -> str:
+    # Sort ranges by starting index to avoid issues with overlapping ranges
+    ranges = sorted(ranges, key=lambda x: x.start_index)
+
     # Initialize an empty list to hold the parts of the modified string
     modified_parts = []
     previous_end = 0
 
     # Iterate through the indices and lengths and wrap the specified words with "^"
-    for start, length in start_indices_and_lengths:
-        end = start + length
+    for range_ in ranges:
+        end = range_.start_index + range_.length
         # Add the part of the string before the current word
-        modified_parts.append(text[previous_end:start])
+        modified_parts.append(text[previous_end:range_.start_index])
         # Add the current word wrapped with "^"
-        modified_parts.append(wrapper_char + text[start:end] + wrapper_char)
+        modified_parts.append(wrapper_char + text[range_.start_index:end] + wrapper_char)
         # Update the previous_end to the end of the current word
         previous_end = end
 

@@ -57,6 +57,12 @@ class Message:
         return f"{update.message.from_user.first_name} {update.message.from_user.last_name}"
 
 
+@dataclass
+class SpoilerRange:
+    start_index: int
+    length: int
+
+
 def get_redis_client() -> Redis:
     """
     Gets the Redis client
