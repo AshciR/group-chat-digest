@@ -4,7 +4,7 @@ import logging
 import os
 import re
 import sys
-from typing import Tuple
+from typing import Tuple, List, Optional
 
 from dotenv import load_dotenv
 from openai import OpenAI
@@ -205,7 +205,7 @@ async def format_message_for_openai(messages: list[Message]) -> str:
     return prompt_message_schema
 
 
-async def _summarize_messages_as_bullet_points(messages: list[Message]) -> str:
+async def _summarize_messages_as_bullet_points(messages: list[Message]) -> tuple[str, Optional[list[SpoilerRange]]]:
     client = get_ai_client()
 
     formatted_messages = await format_message_for_openai(messages)
@@ -215,17 +215,26 @@ async def _summarize_messages_as_bullet_points(messages: list[Message]) -> str:
         # The summary will have words surrounded by '^'.
         # We need to remove the '^' and generate spoiler ranges
         wrapped_summary = summarize_messages_with_spoilers_as_bullet_points(client, formatted_messages)
-        summary = unwrap_spoiler_content(wrapped_summary)
+
+        # We want to add an extra line between the points for readability
+        bullet_points = wrapped_summary.strip().split('\n')
+        formatted_bullet_points = '\n\n'.join(bullet_points)
+
+        un_wrapped_summary, spoiler_ranges = unwrap_spoiler_content(formatted_bullet_points)
+
+        logger.debug(formatted_bullet_points)
+        return un_wrapped_summary, spoiler_ranges
     else:
+
         summary = summarize_messages_as_bullet_points(client, formatted_messages)
 
-    # We want to add an extra line between the points for readability
-    bullet_points = summary.strip().split('\n')
-    formatted_bullet_points = '\n\n'.join(bullet_points)
+        # We want to add an extra line between the points for readability
+        bullet_points = summary.strip().split('\n')
+        formatted_bullet_points = '\n\n'.join(bullet_points)
 
-    logger.debug(formatted_bullet_points)
+        logger.debug(formatted_bullet_points)
 
-    return formatted_bullet_points
+        return formatted_bullet_points, []
 
 
 def unwrap_spoiler_content(wrapped_summary: str) -> Tuple[str, list[SpoilerRange]]:
