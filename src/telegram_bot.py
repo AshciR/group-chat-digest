@@ -4,7 +4,7 @@ import logging
 import os
 import re
 import sys
-from typing import Tuple, List, Optional
+from typing import Tuple, Optional
 
 from dotenv import load_dotenv
 from openai import OpenAI
@@ -91,25 +91,37 @@ async def summary_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
         messages.reverse()
 
         # Send N messages to OpenAI
-        summarized_msg = await _summarize_messages_as_paragraph(messages)
-        await context.bot.send_message(chat_id=chat_id, text=summarized_msg)
+        summarized_msg, spoiler_ranges = await _summarize_messages_as_paragraph(messages)
+        entities: list[MessageEntity] = [
+            MessageEntity(type=MessageEntityType.SPOILER, offset=spoiler.start_index, length=spoiler.length)
+            for spoiler in spoiler_ranges
+        ]
+
+        await context.bot.send_message(
+            chat_id=chat_id,
+            text=summarized_msg,
+            entities=entities
+        )
 
 
-async def _summarize_messages_as_paragraph(messages: list[Message]) -> str:
+async def _summarize_messages_as_paragraph(messages: list[Message]) -> tuple[str, Optional[list[SpoilerRange]]]:
     client = get_ai_client()
 
     formatted_messages = await format_message_for_openai(messages)
     has_spoilers = any(message.has_spoilers for message in messages)
 
     if has_spoilers:
+        # The summary will have words surrounded by '^'.
+        # We need to remove the '^' and generate spoiler ranges
         wrapped_summary = summarize_messages_with_spoilers_as_paragraph(client, formatted_messages)
-        summary = unwrap_spoiler_content(wrapped_summary)
+        un_wrapped_summary, spoiler_ranges = unwrap_spoiler_content(wrapped_summary)
     else:
-        summary = summarize_messages_as_paragraph(client, formatted_messages)
+        un_wrapped_summary = summarize_messages_as_bullet_points(client, formatted_messages)
+        spoiler_ranges = []
 
-    logger.debug(summary)
+    logger.debug(un_wrapped_summary)
 
-    return summary
+    return un_wrapped_summary, spoiler_ranges
 
 
 async def whisper_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
@@ -142,15 +154,27 @@ async def whisper_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
         # We have to reverse the list b/c Redis stores the latest message in index 0
         messages.reverse()
 
-        # Send N messages to OpenAI
-        summarized_msg = await _summarize_messages_as_bullet_points(messages)
-
-        gist_prefix = f"Gist from {update.effective_chat.effective_name} chat:\n\n"
-        private_gist = gist_prefix + summarized_msg
+        summarized_msg, spoiler_ranges = await _summarize_messages_as_bullet_points(messages)
+        entities: list[MessageEntity] = [
+            MessageEntity(type=MessageEntityType.SPOILER, offset=spoiler.start_index, length=spoiler.length)
+            for spoiler in spoiler_ranges
+        ]
 
         # Send private message to the user
         try:
-            await context.bot.send_message(chat_id=update.effective_user.id, text=private_gist)
+            gist_prefix = f"Gist from {update.effective_chat.effective_name} chat:\n\n"
+            # We're sending the prefix message before the private gist
+            # B/c if the private gist contains entities, the math to work out the
+            # indexes becomes tricky.
+            await context.bot.send_message(
+                chat_id=update.effective_user.id,
+                text=gist_prefix,
+            )
+            await context.bot.send_message(
+                chat_id=update.effective_user.id,
+                text=summarized_msg,
+                entities=entities
+            )
         except Forbidden:
             warning_msg = "Sorry, but I can't message you privately unless you start a chat with me first."
             await context.bot.send_message(chat_id=chat_id, text=warning_msg)
@@ -186,8 +210,17 @@ async def gist_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
         messages.reverse()
 
         # Send N messages to OpenAI
-        summarized_msg = await _summarize_messages_as_bullet_points(messages)
-        await context.bot.send_message(chat_id=chat_id, text=summarized_msg)
+        summarized_msg, spoiler_ranges = await _summarize_messages_as_bullet_points(messages)
+        entities: list[MessageEntity] = [
+            MessageEntity(type=MessageEntityType.SPOILER, offset=spoiler.start_index, length=spoiler.length)
+            for spoiler in spoiler_ranges
+        ]
+
+        await context.bot.send_message(
+            chat_id=chat_id,
+            text=summarized_msg,
+            entities=entities
+        )
 
 
 async def _determine_number_of_messages_from_message_context(context):
