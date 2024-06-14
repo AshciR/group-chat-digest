@@ -28,8 +28,33 @@ def summarize_messages_as_paragraph(client: OpenAI, messages: str) -> str:
     prompt = "You are a secretary. I will give you messages from a group chat in the following format: " \
              "{Sender}: {Message}; {Sender}: {Message}. " \
              "I want you to summarize the messages into paragraphs. " \
-             "Assume that the messages are in chronological order. "  \
+             "Assume that the messages are in chronological order. " \
              "Also, make your best effort to associate messages that have a common theme."
+
+    completion = client.chat.completions.create(
+        model="gpt-3.5-turbo",
+        messages=[
+            {"role": "system", "content": f"{prompt}"},
+            {"role": "user", "content": f"{messages}"}
+        ]
+    )
+    return completion.choices[0].message.content
+
+
+def summarize_messages_with_spoilers_as_paragraph(client: OpenAI, messages: str) -> str:
+    """
+    Uses ChatGPT to summarize messages and returns the summary in a TL;DR format.
+    It needs the messages to be in the following format.
+    {Sender}:{Message};{Sender}:{Message};...{Sender}:{Message}
+    @param client: The OpenAI client
+    @param messages: the messages in the {Sender}:{Message} format
+    @return: the summarized messages
+    """
+    prompt = "You are a secretary. I will give you messages from a group chat in the following format: " \
+             "{Sender}: {Message}; {Sender}: {Message}. " \
+             "I want you to summarize the messages into paragraphs. " \
+             "Assume that the messages are in chronological order. " \
+             "Also, make your best effort to associate messages that have a common theme.\n" + _get_spoiler_appender()
 
     completion = client.chat.completions.create(
         model="gpt-3.5-turbo",
@@ -54,7 +79,7 @@ def summarize_messages_as_bullet_points(client: OpenAI, messages: str) -> str:
              "{Sender}: {Message}; {Sender}: {Message}. " \
              "I want you to summarize the messages into bullet points. " \
              "Use hyphens as the bullet points. " \
-             "Assume that the messages are in chronological order. "  \
+             "Assume that the messages are in chronological order. " \
              "Also, make your best effort to associate messages that have a common theme."
 
     completion = client.chat.completions.create(
@@ -65,6 +90,41 @@ def summarize_messages_as_bullet_points(client: OpenAI, messages: str) -> str:
         ]
     )
     return completion.choices[0].message.content
+
+
+def summarize_messages_with_spoilers_as_bullet_points(client: OpenAI, messages: str) -> str:
+    """
+    Uses ChatGPT to summarize messages and returns the summary in a TL;DR format.
+    It needs the messages to be in the following format.
+    {Sender}:{Message};{Sender}:{Message};...{Sender}:{Message}
+    @param client: The OpenAI client
+    @param messages: the messages in the {Sender}:{Message} format
+    @return: the summarized messages
+    """
+    prompt = "You are a secretary. I will give you messages from a group chat in the following format: " \
+             "{Sender}: {Message}; {Sender}: {Message}. " \
+             "I want you to summarize the messages into bullet points. " \
+             "Use hyphens as the bullet points. " \
+             "Assume that the messages are in chronological order. " \
+             "Also, make your best effort to associate messages that have a common theme.\n" + _get_spoiler_appender()
+
+    completion = client.chat.completions.create(
+        model="gpt-3.5-turbo",
+        messages=[
+            {"role": "system", "content": f"{prompt}"},
+            {"role": "user", "content": f"{messages}"}
+        ]
+    )
+    return completion.choices[0].message.content
+
+
+def _get_spoiler_appender() -> str:
+    prompt = "Some messages or words may be surrounded by '^' symbol. " \
+             "I want you to treat the messages as containing spoiler content. " \
+             "In your summary wrap the summarized ideas and/or words with the '^' symbol " \
+             "to identify them as spoiler content."
+
+    return prompt
 
 
 def ping_openai(client: OpenAI) -> str:
