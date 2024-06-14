@@ -82,11 +82,11 @@ def test_get_admin_handlers():
         # No spoilers
         ("No spoilers here", [], "No spoilers here"),
         # Mixed ^ and Spoilers
-        ("I am ^not^ a spoiler", [(5, 3)], "I am *not* ^a s^poiler"),
+        ("I am ^not^ a spoiler", [(11, 3)], "I am *not* ^a s^poiler"),
         # Multiple spoilers
-        ("Multiple spoilers here", [(0, 8), (17, 4)], "^Multiple^ spoilers ^here^"),
+        ("Multiple spoilers here", [(0, 8), (18, 4)], "^Multiple^ spoilers ^here^"),
         # Multiple spoilers mixed with *
-        ("Multiple ^spoilers^ here", [(0, 8), (18, 4)], "^Multiple*^ ^spoilers^ ^here^"),
+        ("Multiple ^spoilers^ here", [(0, 8), (20, 4)], "^Multiple^ *spoilers* ^here^"),
         # Edge cases
         ("Edge cases", [(0, 4), (5, 5)], "^Edge^ ^cases^"),
     ]
