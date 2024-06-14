@@ -215,26 +215,17 @@ async def _summarize_messages_as_bullet_points(messages: list[Message]) -> tuple
         # The summary will have words surrounded by '^'.
         # We need to remove the '^' and generate spoiler ranges
         wrapped_summary = summarize_messages_with_spoilers_as_bullet_points(client, formatted_messages)
-
-        # We want to add an extra line between the points for readability
-        bullet_points = wrapped_summary.strip().split('\n')
-        formatted_bullet_points = '\n\n'.join(bullet_points)
-
-        un_wrapped_summary, spoiler_ranges = unwrap_spoiler_content(formatted_bullet_points)
-
-        logger.debug(formatted_bullet_points)
-        return un_wrapped_summary, spoiler_ranges
+        un_wrapped_summary, spoiler_ranges = unwrap_spoiler_content(wrapped_summary)
     else:
+        un_wrapped_summary = summarize_messages_as_bullet_points(client, formatted_messages)
+        spoiler_ranges = []
 
-        summary = summarize_messages_as_bullet_points(client, formatted_messages)
+    # Add an extra line between the points for readability
+    bullet_points = un_wrapped_summary.strip().split('\n')
+    formatted_bullet_points = '\n\n'.join(bullet_points)
 
-        # We want to add an extra line between the points for readability
-        bullet_points = summary.strip().split('\n')
-        formatted_bullet_points = '\n\n'.join(bullet_points)
-
-        logger.debug(formatted_bullet_points)
-
-        return formatted_bullet_points, []
+    logger.debug(formatted_bullet_points)
+    return formatted_bullet_points, spoiler_ranges
 
 
 def unwrap_spoiler_content(wrapped_summary: str) -> Tuple[str, list[SpoilerRange]]:
