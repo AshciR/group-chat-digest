@@ -428,6 +428,30 @@ async def status_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
     await context.bot.send_message(chat_id=chat_id, text=status_msg)
 
 
+async def spoiler_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    """
+    Command that gets the status of the bot.
+    Used for debugging purposes.
+    @rtype: object
+    """
+
+    if not await _is_admin_user(update, context):
+        return
+
+    chat_id = update.effective_chat.id
+
+    msg = "I am spoiler text!"
+    entities = [
+        MessageEntity(type=MessageEntityType.SPOILER, offset=5, length=7)
+    ]
+
+    await context.bot.send_message(
+        chat_id=chat_id,
+        text=msg,
+        entities=entities,
+    )
+
+
 async def _is_admin_user(update: Update, context: ContextTypes.DEFAULT_TYPE) -> bool:
     user_id = update.effective_user.id
     chat_id = update.effective_chat.id
@@ -510,6 +534,7 @@ def get_admin_handlers() -> list[BaseHandler]:
     return [
         CommandHandler(REPLAY_COMMAND, replay_messages_handler),
         CommandHandler(STATUS_COMMAND, status_handler),
+        CommandHandler("spoiler", spoiler_handler),  # TODO: Remove me afterwards
     ]
 
 
