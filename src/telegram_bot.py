@@ -223,18 +223,7 @@ async def listen_for_messages_handler(update: Update, context: ContextTypes.DEFA
         logger.info(f'chat id: {chat_id} attempted to use the bot but was not whitelisted')
         return
 
-    # TODO: Add function that will check update and add spoiler flag
-    # in addition to replacing the original content with ^ wrappers if needed
     message = create_message_from_update(update)
-
-    # message_owner = Message.convert_update_to_owner(update)
-    # message = Message(
-    #     message_id=update.message.id,
-    #     owner_id=update.message.from_user.id,
-    #     content=update.message.text,
-    #     owner_name=message_owner,
-    #     created_at=update.message.date.isoformat()
-    # )
     logger.debug(f'Got message: {message} from chat id: {chat_id}')
 
     redis_client = get_redis_client()
