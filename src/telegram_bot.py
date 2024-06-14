@@ -20,7 +20,7 @@ from message_storage import (Message,
                              get_latest_n_messages,
                              DEFAULT_MESSAGE_STORAGE, configure_message_storage, MAX_MESSAGE_STORAGE, SpoilerRange)
 from openai_utils import get_ai_client, summarize_messages_as_bullet_points, summarize_messages_as_paragraph, \
-    ping_openai, summarize_messages_with_spoilers_as_paragraph
+    ping_openai, summarize_messages_with_spoilers_as_paragraph, summarize_messages_with_spoilers_as_bullet_points
 from white_list import is_whitelisted, is_admin, get_admin_user_list
 
 logger = logging.getLogger(__name__)
@@ -141,8 +141,7 @@ async def whisper_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
         messages.reverse()
 
         # Send N messages to OpenAI
-        prompt_message_schema = await format_message_for_openai(messages)
-        summarized_msg = _summarize_messages_as_bullet_points(prompt_message_schema)
+        summarized_msg = await _summarize_messages_as_bullet_points(messages)
 
         gist_prefix = f"Gist from {update.effective_chat.effective_name} chat:\n\n"
         private_gist = gist_prefix + summarized_msg
@@ -185,8 +184,7 @@ async def gist_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
         messages.reverse()
 
         # Send N messages to OpenAI
-        prompt_message_schema = await format_message_for_openai(messages)
-        summarized_msg = _summarize_messages_as_bullet_points(prompt_message_schema)
+        summarized_msg = await _summarize_messages_as_bullet_points(messages)
         await context.bot.send_message(chat_id=chat_id, text=summarized_msg)
 
 
@@ -205,9 +203,16 @@ async def format_message_for_openai(messages: list[Message]) -> str:
     return prompt_message_schema
 
 
-def _summarize_messages_as_bullet_points(formatted_messages: str) -> str:
+async def _summarize_messages_as_bullet_points(messages: list[Message]) -> str:
     client = get_ai_client()
-    summary = summarize_messages_as_bullet_points(client, formatted_messages)
+
+    formatted_messages = await format_message_for_openai(messages)
+    has_spoilers = any(message.has_spoilers for message in messages)
+
+    if has_spoilers:
+        summary = summarize_messages_with_spoilers_as_bullet_points(client, formatted_messages)
+    else:
+        summary = summarize_messages_as_bullet_points(client, formatted_messages)
 
     # We want to add an extra line between the points for readability
     bullet_points = summary.strip().split('\n')
