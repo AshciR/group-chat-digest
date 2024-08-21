@@ -40,6 +40,12 @@ Use the following command to build the image
 docker build . -t <tag-the-image>
 ```
 
+### C. Running from PyCharm
+1. Create a run config using `main.py`
+2. Set an LOCAL env variable (optional)
+3. Start the Redis database locally `rye run redis`
+4. Run `main.py`
+
 ## Testing
 This project contains tests. We use Pytest for the testing framework.
 Tests can be run 2 ways:

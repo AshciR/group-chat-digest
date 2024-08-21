@@ -18,7 +18,7 @@ from message_storage import (Message,
                              get_latest_n_messages,
                              DEFAULT_MESSAGE_STORAGE, configure_message_storage, MAX_MESSAGE_STORAGE)
 from openai_utils import get_ai_client, summarize_messages_as_bullet_points, summarize_messages_as_paragraph, \
-    ping_openai
+    ping_openai, OPEN_AI_MODEL
 from white_list import is_whitelisted, is_admin, get_admin_user_list
 
 logger = logging.getLogger(__name__)
@@ -365,6 +365,7 @@ async def _get_open_ai_status(ai_client: OpenAI) -> str:
     open_ai_response = ping_openai(ai_client)
     open_ai_msg = f"""OpenAI 
 Status: {open_ai_response}
+Model: {OPEN_AI_MODEL}
     """
     return open_ai_msg
 
