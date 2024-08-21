@@ -3,6 +3,8 @@ import os
 from dotenv import load_dotenv
 from openai import OpenAI
 
+OPEN_AI_MODEL = "gpt-4o-mini"
+
 load_dotenv()
 api_key = os.getenv("OPENAI_API_KEY", "fake-key")  # Need to add a default for the tests to work
 open_client_singleton = OpenAI(api_key=api_key)
@@ -32,7 +34,7 @@ def summarize_messages_as_paragraph(client: OpenAI, messages: str) -> str:
              "Also, make your best effort to associate messages that have a common theme."
 
     completion = client.chat.completions.create(
-        model="gpt-3.5-turbo",
+        model=OPEN_AI_MODEL,
         messages=[
             {"role": "system", "content": f"{prompt}"},
             {"role": "user", "content": f"{messages}"}
@@ -58,7 +60,7 @@ def summarize_messages_as_bullet_points(client: OpenAI, messages: str) -> str:
              "Also, make your best effort to associate messages that have a common theme."
 
     completion = client.chat.completions.create(
-        model="gpt-3.5-turbo",
+        model=OPEN_AI_MODEL,
         messages=[
             {"role": "system", "content": f"{prompt}"},
             {"role": "user", "content": f"{messages}"}
@@ -80,7 +82,7 @@ def ping_openai(client: OpenAI) -> str:
     message = "Ping"
     try:
         completion = client.chat.completions.create(
-            model="gpt-3.5-turbo",
+            model=OPEN_AI_MODEL,
             messages=[
                 {"role": "system", "content": f"{prompt}"},
                 {"role": "user", "content": f"{message}"}
