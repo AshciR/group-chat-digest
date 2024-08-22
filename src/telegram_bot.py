@@ -16,7 +16,8 @@ from message_storage import (Message,
                              store_message,
                              chat_exists,
                              get_latest_n_messages,
-                             DEFAULT_MESSAGE_STORAGE, configure_message_storage, MAX_MESSAGE_STORAGE)
+                             DEFAULT_MESSAGE_STORAGE, configure_message_storage, MAX_MESSAGE_STORAGE,
+                             get_all_chats_the_bot_is_in)
 from openai_utils import get_ai_client, summarize_messages_as_bullet_points, summarize_messages_as_paragraph, \
     ping_openai, OPEN_AI_MODEL
 from white_list import is_whitelisted, is_admin, get_admin_user_list
@@ -33,6 +34,7 @@ HELP_COMMAND = 'help'
 # Admin commands
 REPLAY_COMMAND = 'replay'
 STATUS_COMMAND = 'status'
+BROADCAST_COMMAND = 'alert'
 
 
 async def start_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
@@ -326,6 +328,30 @@ async def status_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
     await context.bot.send_message(chat_id=chat_id, text=status_msg)
 
 
+async def broadcast_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    """
+    Alerts all groups that use the bot.
+    Should be used judiciously to inform users,
+    and not spam them with updates.
+    @param update:
+    @param context:
+    @return:
+    """
+
+    if not _is_admin_user(update, context):
+        return
+
+    # Determine all the groups the bot is in
+    chat_ids: set[int] = await get_all_chats_the_bot_is_in()
+
+    # Send message to all the groups
+    broadcast_msg = "Mock Broadcast message"
+    for chat_id in chat_ids:
+        await context.bot.send_message(chat_id=chat_id, text=broadcast_msg)
+
+    return
+
+
 async def _is_admin_user(update: Update, context: ContextTypes.DEFAULT_TYPE) -> bool:
     user_id = update.effective_user.id
     chat_id = update.effective_chat.id
@@ -409,6 +435,7 @@ def get_admin_handlers() -> list[BaseHandler]:
     return [
         CommandHandler(REPLAY_COMMAND, replay_messages_handler),
         CommandHandler(STATUS_COMMAND, status_handler),
+        CommandHandler(BROADCAST_COMMAND, broadcast_handler),
     ]
 
 

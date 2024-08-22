@@ -127,3 +127,7 @@ def get_latest_n_messages(
     messages_json = [json.loads(msg) for msg in serialized_messages]
     messages = [Message(**msg) for msg in messages_json]
     return messages
+
+
+async def get_all_chats_the_bot_is_in():
+    return set()
