@@ -127,3 +127,15 @@ def get_latest_n_messages(
     messages_json = [json.loads(msg) for msg in serialized_messages]
     messages = [Message(**msg) for msg in messages_json]
     return messages
+
+
+def get_all_chat_ids(redis_client: Redis) -> set[int]:
+    """
+    Returns the chat id for all chats the bot is in
+    @return: set of the chat ids
+    """
+    chat_ids = {
+        int(key.decode('utf-8'))
+        for key in redis_client.keys()
+    }
+    return chat_ids
