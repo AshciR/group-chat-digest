@@ -17,7 +17,7 @@ from message_storage import (Message,
                              chat_exists,
                              get_latest_n_messages,
                              DEFAULT_MESSAGE_STORAGE, configure_message_storage, MAX_MESSAGE_STORAGE,
-                             get_all_chats_the_bot_is_in)
+                             get_all_chat_ids)
 from openai_utils import get_ai_client, summarize_messages_as_bullet_points, summarize_messages_as_paragraph, \
     ping_openai, OPEN_AI_MODEL
 from white_list import is_whitelisted, is_admin, get_admin_user_list
@@ -338,14 +338,20 @@ async def broadcast_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
     @return:
     """
 
-    if not _is_admin_user(update, context):
+    if not await _is_admin_user(update, context):
         return
 
-    # Determine all the groups the bot is in
-    chat_ids: set[int] = await get_all_chats_the_bot_is_in()
+    if len(context.args) < 1:
+        await update.message.reply_text("Broadcast message can not be empty")
+        return
 
-    # Send message to all the groups
-    broadcast_msg = "Mock Broadcast message"
+    # Find the chats the bot is in
+    redis = get_redis_client()
+    chat_ids: set[int] = get_all_chat_ids(redis)
+
+    # Send message to all the chats
+    broadcast_msg = " ".join(context.args[0:])
+    logger.info(f"Broadcasting '{broadcast_msg}' to {len(chat_ids)} chats")
     for chat_id in chat_ids:
         await context.bot.send_message(chat_id=chat_id, text=broadcast_msg)
 

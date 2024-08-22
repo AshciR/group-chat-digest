@@ -9,7 +9,7 @@ from message_storage import (
     store_message,
     chat_exists,
     get_latest_n_messages,
-    configure_message_storage, MAX_MESSAGE_STORAGE
+    configure_message_storage, MAX_MESSAGE_STORAGE, get_all_chat_ids
 )
 
 
@@ -157,6 +157,26 @@ def test_get_latest_n_messages_when_n_is_invalid(stub_redis_client, num_of_msgs)
     assert len(latest_messages) == 0
 
 
+def test_get_all_chat_ids(stub_redis_client):
+    # Given: We have messages in multiple chats
+    number_of_messages_to_create = range(1, 5)
+    for index in number_of_messages_to_create:
+        _create_test_message(
+            stub_redis_client,
+            chat_id=index * -1,  # Group chats are negative numbers
+            message_id=100 + index,
+            owner_id=200 + index,
+            content=f"Test message chat: {index * -1}, id: {100 + index}"
+        )
+
+    # When: We get all the chats ids
+    chat_ids = get_all_chat_ids(stub_redis_client)
+
+    # Then: It should return the correct amount
+    assert len(chat_ids) == len(number_of_messages_to_create)
+    assert chat_ids == {num * -1 for num in number_of_messages_to_create}
+
+
 def test_configure_message_storage_success(mocker):
     # Given: We have valid configs
     mocker.patch(
@@ -207,9 +227,9 @@ def test_configure_message_storage_timeout(mocker):
 
 
 @pytest.mark.parametrize("first_name, last_name, expected", [
-    ("John", "Doe", "John Doe"),          # Test case with both first and last names
-    ("Jane", None, "Jane"),               # Test case with only first name
-    ("Alice", "", "Alice")                # Test case with an empty last name
+    ("John", "Doe", "John Doe"),  # Test case with both first and last names
+    ("Jane", None, "Jane"),  # Test case with only first name
+    ("Alice", "", "Alice")  # Test case with an empty last name
 ])
 def test_convert_update_to_owner(first_name, last_name, expected):
     # Given: The update has usernames

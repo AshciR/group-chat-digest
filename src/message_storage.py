@@ -129,5 +129,13 @@ def get_latest_n_messages(
     return messages
 
 
-async def get_all_chats_the_bot_is_in():
-    return set()
+def get_all_chat_ids(redis_client: Redis) -> set[int]:
+    """
+    Returns the chat id for all chats the bot is in
+    @return: set of the chat ids
+    """
+    chat_ids = {
+        int(key.decode('utf-8'))
+        for key in redis_client.keys()
+    }
+    return chat_ids
