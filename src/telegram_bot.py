@@ -36,6 +36,12 @@ REPLAY_COMMAND = 'replay'
 STATUS_COMMAND = 'status'
 BROADCAST_COMMAND = 'alert'
 
+NOT_WHITE_LISTED_FRIENDLY_MESSAGE = (
+    "Welcome to the ChatNuff bot 🗣️🤖!\n\n"
+    "Currently, you don't have permission to give me commands in this chat. "
+    "However, I can respond to you privately here if you use me in chats where I have the necessary permissions."
+)
+
 
 async def start_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
     """
@@ -48,7 +54,7 @@ async def start_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
     if not is_whitelisted(chat_id):
         logger.info(f'chat id: {chat_id} attempted to use the bot but was not whitelisted')
-        await context.bot.send_message(chat_id=chat_id, text="You are not currently allowed to use this bot")
+        await context.bot.send_message(chat_id=chat_id, text=NOT_WHITE_LISTED_FRIENDLY_MESSAGE)
         return
 
     start_msg = """Welcome to the ChatNuff bot 🗣️🤖!
@@ -72,7 +78,7 @@ async def summary_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
     if not is_whitelisted(chat_id):
         logger.info(f'chat id: {chat_id} attempted to use the bot but was not whitelisted')
-        await context.bot.send_message(chat_id=chat_id, text="You are not currently allowed to use this bot")
+        await context.bot.send_message(chat_id=chat_id, text=NOT_WHITE_LISTED_FRIENDLY_MESSAGE)
         return
 
     redis_client = get_redis_client()
@@ -116,7 +122,7 @@ async def whisper_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
     if not is_whitelisted(chat_id):
         logger.info(f'chat id: {chat_id} attempted to use the bot but was not whitelisted')
-        await context.bot.send_message(chat_id=chat_id, text="You are not currently allowed to use this bot")
+        await context.bot.send_message(chat_id=chat_id, text=NOT_WHITE_LISTED_FRIENDLY_MESSAGE)
         return
 
     redis_client = get_redis_client()
@@ -160,7 +166,7 @@ async def gist_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
     if not is_whitelisted(chat_id):
         logger.info(f'chat id: {chat_id} attempted to use the bot but was not whitelisted')
-        await context.bot.send_message(chat_id=chat_id, text="You are not currently allowed to use this bot")
+        await context.bot.send_message(chat_id=chat_id, text=NOT_WHITE_LISTED_FRIENDLY_MESSAGE)
         return
 
     redis_client = get_redis_client()
@@ -221,6 +227,7 @@ async def listen_for_messages_handler(update: Update, context: ContextTypes.DEFA
 
     if not is_whitelisted(chat_id):
         logger.info(f'chat id: {chat_id} attempted to use the bot but was not whitelisted')
+        await context.bot.send_message(chat_id=chat_id, text=NOT_WHITE_LISTED_FRIENDLY_MESSAGE)
         return
 
     message_owner = Message.convert_update_to_owner(update)
@@ -249,7 +256,7 @@ async def help_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
     if not is_whitelisted(chat_id):
         logger.info(f'chat id: {chat_id} attempted to use the bot but was not whitelisted')
-        await context.bot.send_message(chat_id=chat_id, text="You are not currently allowed to use this bot")
+        await context.bot.send_message(chat_id=chat_id, text=NOT_WHITE_LISTED_FRIENDLY_MESSAGE)
         return
 
     help_text = f"""Welcome to the ChatNuff bot 🗣️🤖!
