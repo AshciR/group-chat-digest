@@ -407,10 +407,10 @@ async def broadcast_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
     chat_ids: set[int] = get_all_chat_ids(redis)
 
     # Send message to all the chats
-    broadcast_msg = " ".join(context.args[0:])
+    broadcast_msg = update.effective_message.text.replace("/alert", "", 1).strip()
     logger.info(f"Broadcasting '{broadcast_msg}' to {len(chat_ids)} chats")
     for chat_id in chat_ids:
-        await context.bot.send_message(chat_id=chat_id, text=broadcast_msg)
+        await context.bot.send_message(chat_id=chat_id, text=broadcast_msg, parse_mode="markdown")
 
     return
 
