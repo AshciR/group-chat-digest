@@ -323,8 +323,11 @@ Will give you the bullet form of the last 50 messages.
 However, the maximum number of messages I can handle is {MAX_MESSAGE_STORAGE}.
 
 Happy chatting! 🗣️❤️
+
+Bot Artwork created by [@Spritewrench](https://spritewrench.com/) 🎨
+
 """
-    await context.bot.send_message(chat_id=chat_id, text=help_text)
+    await context.bot.send_message(chat_id=chat_id, text=help_text, parse_mode="markdown")
 
 
 #####################################################################
