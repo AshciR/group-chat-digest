@@ -7,7 +7,7 @@ import sys
 from dotenv import load_dotenv
 from openai import OpenAI
 from telegram import Update
-from telegram.error import Forbidden
+from telegram.error import Forbidden, BadRequest
 from telegram.ext import ApplicationBuilder, ContextTypes, CommandHandler, filters, MessageHandler
 from telegram.ext._application import Application, BaseHandler
 
@@ -410,7 +410,15 @@ async def broadcast_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
     broadcast_msg = update.effective_message.text.replace("/alert", "", 1).strip()
     logger.info(f"Broadcasting '{broadcast_msg}' to {len(chat_ids)} chats")
     for chat_id in chat_ids:
-        await context.bot.send_message(chat_id=chat_id, text=broadcast_msg, parse_mode="markdown")
+        try:
+            logger.info(f"Sending broadcast message to chat id: {chat_id}")
+            await context.bot.send_message(chat_id=chat_id, text=broadcast_msg, parse_mode="markdown")
+        except BadRequest:
+            logger.error(f"Failed to send broadcast message to chat id: {chat_id}. Status code: 400")
+        except Forbidden:
+            logger.error(f"Failed to send broadcast message to chat id: {chat_id}. Status code: 403")
+        except Exception:
+            logger.exception(f"Failed to send broadcast message to chat id: {chat_id}.")
 
     return
 
