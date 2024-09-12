@@ -4,6 +4,7 @@ def get_white_list() -> list[int]:
         -1002088317098,  # Girls chat
         -4257039919,     # Test group
         -1001598674948,  # Outside 4ever
+        -1001214465416,  # Fidelity chat
         -4170925867,  # Staging Chat
         -4239122711,  # Dev Chat
         *get_admin_user_list()  # Telegram treats user's chats and user id as the same thing
