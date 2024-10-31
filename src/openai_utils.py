@@ -95,7 +95,7 @@ def ping_openai(client: OpenAI) -> str:
         return f"An error occurred: {e}"
 
 
-def convert_to_speech(client: OpenAI, text: str) -> Path:
+def convert_to_speech(client: OpenAI, text: str, base_dir: Path = Path(__file__).parent) -> Path:
     """
     Converts a given text input into speech, saves it as an audio file in MP3 format,
     and returns the file path.
@@ -108,6 +108,7 @@ def convert_to_speech(client: OpenAI, text: str) -> Path:
     Args:
         client (OpenAI): The OpenAI client instance used to generate speech from text.
         text (str): The text content to be converted into speech.
+        base_dir (Path): The base directory for saving the voice message (for testing or custom paths).
 
     Returns:
         Path: The file path of the generated speech audio file.
@@ -117,7 +118,7 @@ def convert_to_speech(client: OpenAI, text: str) -> Path:
     """
 
     # Create a directory called 'voice_messages' if it doesn't exist
-    voice_messages_dir = Path(__file__).parent / "voice_messages"
+    voice_messages_dir = base_dir / "voice_messages"
     voice_messages_dir.mkdir(exist_ok=True)
 
     # Generate a unique filename using UUID

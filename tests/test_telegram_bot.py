@@ -1,3 +1,5 @@
+from unittest.mock import MagicMock
+
 import pytest
 from telegram.ext import CommandHandler, MessageHandler
 
@@ -6,7 +8,7 @@ from telegram_bot import (
     format_message_for_openai, get_handlers, summary_handler, gist_handler, help_handler,
     listen_for_messages_handler, whisper_gist_handler, start_handler, get_admin_handlers,
     replay_messages_handler,
-    status_handler, broadcast_handler, whisper_handler
+    status_handler, broadcast_handler, whisper_handler, does_user_want_a_voice_message
 )
 
 
@@ -25,6 +27,27 @@ async def test_format_message_for_openai():
     # Then: They're formatted correctly
     expected_result = "Alice: Hello;Bob: Hi;Charlie: Bye?"
     assert result == expected_result, f"Expected '{expected_result}', but got '{result}'"
+
+
+@pytest.mark.asyncio
+@pytest.mark.parametrize("args, expected", [
+    (["5", "voice"], True),  # 'voice' as the second argument
+    (["voice", "something"], True),  # 'voice' as the first argument
+    (["5", "something"], False),  # 'voice' is not present
+    (["something", "other", "voice"], False),  # 'voice' is not in the first or second position
+    (["something"], False),  # Only one argument, not 'voice'
+    ([], False)  # No arguments provided
+])
+async def test_does_user_want_a_voice_message(args, expected):
+    # Given: A mock context with the specified args
+    context = MagicMock()
+    context.args = args
+
+    # When: Calling does_user_want_a_voice_message
+    result = await does_user_want_a_voice_message(context)
+
+    # Then: Assert that the result matches the expected outcome
+    assert result == expected
 
 
 def test_get_handlers():

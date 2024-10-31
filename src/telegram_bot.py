@@ -270,7 +270,7 @@ async def _determine_number_of_messages_from_message_context(context):
     return number_of_messages
 
 
-async def does_user_want_a_voice_message(context) -> bool:
+async def does_user_want_a_voice_message(context: ContextTypes.DEFAULT_TYPE) -> bool:
     """
     Determines if the second argument in the message context is 'voice'.
 
