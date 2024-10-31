@@ -1,0 +1,17 @@
+🤖 @ChatNuffBot Update - Version 0.3.0
+
+Hello @ChatNuffBot users! We’re excited to bring you the latest updates designed to enhance your experience. Here’s what’s new in this version:
+
+✨ New Features
+- /summary and /whisper can now send voice messages: Use '/summary voice' or ''/summary 100 voice' to receive a voice message instead of a text message
+
+🐞 Bug Fixes & Minor Improvements
+- Various minor bug fixes and under-the-hood improvements to ensure @ChatNuffBot runs smoothly.
+
+📢 We Want Your Feedback!
+Thank you for your continued support! If you have any feedback or encounter any issues, feel free to reach out to me directly at @Ashcir. Your input helps us improve and make @ChatNuffBot even better.
+
+Happy chatting! 🤖
+
+@Ashcir
+@ChatNuffBot Team
