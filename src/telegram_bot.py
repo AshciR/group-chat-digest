@@ -19,7 +19,8 @@ from message_storage import (Message,
                              DEFAULT_MESSAGE_STORAGE, configure_message_storage, MAX_MESSAGE_STORAGE,
                              get_all_chat_ids)
 from openai_utils import get_ai_client, summarize_messages_as_bullet_points, summarize_messages_as_paragraph, \
-    ping_openai, OPEN_AI_MODEL
+    ping_openai, OPEN_AI_MODEL, convert_to_speech
+from utils import remove_voice_message
 from white_list import is_whitelisted, is_admin, get_admin_user_list
 
 logger = logging.getLogger(__name__)
@@ -87,19 +88,31 @@ async def summary_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
     if not chat_exists(redis_client, chat_id):
         empty_message_notice = "There are no messages to summarize"
         await context.bot.send_message(chat_id=chat_id, text=empty_message_notice)
-    else:
+        return
 
-        # Making assumption that the 1st argument is the number
-        number_of_messages_to_summarize = await _determine_number_of_messages_from_message_context(context)
+    # Making assumption that the 1st argument is the number
+    number_of_messages_to_summarize = await _determine_number_of_messages_from_message_context(context)
 
-        messages = get_latest_n_messages(redis_client, chat_id, number_of_messages_to_summarize)
-        # We have to reverse the list b/c Redis stores the latest message in index 0
-        messages.reverse()
+    messages = get_latest_n_messages(redis_client, chat_id, number_of_messages_to_summarize)
+    # We have to reverse the list b/c Redis stores the latest message in index 0
+    messages.reverse()
 
-        # Send N messages to OpenAI
-        prompt_message_schema = await format_message_for_openai(messages)
-        summarized_msg = _summarize_messages_as_paragraph(prompt_message_schema)
-        await context.bot.send_message(chat_id=chat_id, text=summarized_msg)
+    # Send N messages to OpenAI
+    prompt_message_schema = await format_message_for_openai(messages)
+    summarized_msg = _summarize_messages_as_paragraph(prompt_message_schema)
+
+    send_as_voice_message = await does_user_want_a_voice_message(context)
+    if send_as_voice_message:
+        client = get_ai_client()
+
+        path_to_voice_msg = convert_to_speech(client, summarized_msg)
+        logger.debug(f"Summary voice message was created at {path_to_voice_msg}")
+
+        await context.bot.send_voice(chat_id=chat_id, voice=path_to_voice_msg)
+        remove_voice_message(path_to_voice_msg)
+        return
+
+    await context.bot.send_message(chat_id=chat_id, text=summarized_msg)
 
 
 def _summarize_messages_as_paragraph(formatted_messages: str) -> str:
@@ -176,28 +189,41 @@ async def whisper_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
     if not chat_exists(redis_client, chat_id):
         empty_message_notice = "There are no messages to summarize"
         await context.bot.send_message(chat_id=chat_id, text=empty_message_notice)
-    else:
+        return
 
-        # Making assumption that the 1st argument is the number
-        number_of_messages_to_summarize = await _determine_number_of_messages_from_message_context(context)
+    # Making assumption that the 1st argument is the number
+    number_of_messages_to_summarize = await _determine_number_of_messages_from_message_context(context)
 
-        messages = get_latest_n_messages(redis_client, chat_id, number_of_messages_to_summarize)
-        # We have to reverse the list b/c Redis stores the latest message in index 0
-        messages.reverse()
+    messages = get_latest_n_messages(redis_client, chat_id, number_of_messages_to_summarize)
+    # We have to reverse the list b/c Redis stores the latest message in index 0
+    messages.reverse()
 
-        # Send N messages to OpenAI
-        prompt_message_schema = await format_message_for_openai(messages)
-        summarized_msg = _summarize_messages_as_paragraph(prompt_message_schema)
+    # Send N messages to OpenAI
+    prompt_message_schema = await format_message_for_openai(messages)
+    summarized_msg = _summarize_messages_as_paragraph(prompt_message_schema)
 
-        summary_prefix = f"Summary from {update.effective_chat.effective_name} chat:\n\n"
-        private_summary = summary_prefix + summarized_msg
+    summary_prefix = f"Summary from {update.effective_chat.effective_name} chat:\n\n"
+    private_summary = summary_prefix + summarized_msg
 
-        # Send private message to the user
-        try:
-            await context.bot.send_message(chat_id=update.effective_user.id, text=private_summary)
-        except Forbidden:
-            warning_msg = "Sorry, but I can't message you privately unless you start a chat with me first."
-            await context.bot.send_message(chat_id=chat_id, text=warning_msg)
+    # Send private message to the user
+    try:
+
+        send_as_voice_message = await does_user_want_a_voice_message(context)
+        if send_as_voice_message:
+            client = get_ai_client()
+
+            path_to_voice_msg = convert_to_speech(client, private_summary)
+            logger.debug(f"Whisper voice message was created at {path_to_voice_msg}")
+
+            await context.bot.send_voice(chat_id=update.effective_user.id, voice=path_to_voice_msg)
+            remove_voice_message(path_to_voice_msg)
+            return
+
+        await context.bot.send_message(chat_id=update.effective_user.id, text=private_summary)
+        return
+    except Forbidden:
+        warning_msg = "Sorry, but I can't message you privately unless you start a chat with me first."
+        await context.bot.send_message(chat_id=chat_id, text=warning_msg)
 
 
 async def gist_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
@@ -242,6 +268,19 @@ async def _determine_number_of_messages_from_message_context(context):
         number_of_messages = DEFAULT_MESSAGE_STORAGE
 
     return number_of_messages
+
+
+async def does_user_want_a_voice_message(context) -> bool:
+    """
+    Determines if the second argument in the message context is 'voice'.
+
+    Args:
+        context: The message context containing arguments (context.args).
+
+    Returns:
+        bool: True if the second argument is 'voice', False otherwise.
+    """
+    return any(arg.lower() == "voice" for arg in context.args[:2])
 
 
 async def format_message_for_openai(messages: list[Message]) -> str:
@@ -308,11 +347,12 @@ async def help_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
     help_text = f"""Welcome to the ChatNuff bot 🗣️🤖!
 
 Available commands:
-/{SUMMARY_COMMAND} Summarizes the last {DEFAULT_MESSAGE_STORAGE} messages.
-/{GIST_COMMAND} Gives you a bullet form of the last {DEFAULT_MESSAGE_STORAGE} messages.
-/{WHISPER_COMMAND} Privately messages you the summary of the last {DEFAULT_MESSAGE_STORAGE} messages.
-/{WHISPER_GIST_COMMAND} Privately messages you the bullet points of the last {DEFAULT_MESSAGE_STORAGE} messages.
-/{HELP_COMMAND}: Gives information about the bot.
+/{SUMMARY_COMMAND} : Summarizes the last {DEFAULT_MESSAGE_STORAGE} messages.
+/{SUMMARY_COMMAND} voice : Summarizes the last {DEFAULT_MESSAGE_STORAGE} messages as a voice message.
+/{GIST_COMMAND} : Gives you a bullet form of the last {DEFAULT_MESSAGE_STORAGE} messages.
+/{WHISPER_COMMAND} voice : Privately voice messages you the summary of the last {DEFAULT_MESSAGE_STORAGE} messages.
+/{WHISPER_GIST_COMMAND} : Privately messages you the bullet points of the last {DEFAULT_MESSAGE_STORAGE} messages.
+/{HELP_COMMAND} : Gives information about the bot.
 
 I can also summarize a certain number of messages if you provide me with a number.
 

@@ -1,4 +1,6 @@
 import os
+import uuid
+from pathlib import Path
 
 from dotenv import load_dotenv
 from openai import OpenAI
@@ -30,7 +32,7 @@ def summarize_messages_as_paragraph(client: OpenAI, messages: str) -> str:
     prompt = "You are a secretary. I will give you messages from a group chat in the following format: " \
              "{Sender}: {Message}; {Sender}: {Message}. " \
              "I want you to summarize the messages into paragraphs. " \
-             "Assume that the messages are in chronological order. "  \
+             "Assume that the messages are in chronological order. " \
              "Also, make your best effort to associate messages that have a common theme."
 
     completion = client.chat.completions.create(
@@ -56,7 +58,7 @@ def summarize_messages_as_bullet_points(client: OpenAI, messages: str) -> str:
              "{Sender}: {Message}; {Sender}: {Message}. " \
              "I want you to summarize the messages into bullet points. " \
              "Use hyphens as the bullet points. " \
-             "Assume that the messages are in chronological order. "  \
+             "Assume that the messages are in chronological order. " \
              "Also, make your best effort to associate messages that have a common theme."
 
     completion = client.chat.completions.create(
@@ -91,3 +93,43 @@ def ping_openai(client: OpenAI) -> str:
         return completion.choices[0].message.content
     except Exception as e:
         return f"An error occurred: {e}"
+
+
+def convert_to_speech(client: OpenAI, text: str) -> Path:
+    """
+    Converts a given text input into speech, saves it as an audio file in MP3 format,
+    and returns the file path.
+
+    This function uses the provided OpenAI client to generate a speech audio file
+    from the specified text. The audio file is saved with a unique filename in
+    a 'voice_messages' directory created within the script's directory, if it
+    doesn't already exist.
+
+    Args:
+        client (OpenAI): The OpenAI client instance used to generate speech from text.
+        text (str): The text content to be converted into speech.
+
+    Returns:
+        Path: The file path of the generated speech audio file.
+
+    Raises:
+        Exception: If there is an issue with the speech generation or file streaming.
+    """
+
+    # Create a directory called 'voice_messages' if it doesn't exist
+    voice_messages_dir = Path(__file__).parent / "voice_messages"
+    voice_messages_dir.mkdir(exist_ok=True)
+
+    # Generate a unique filename using UUID
+    voice_message = f"speech_{uuid.uuid4()}.mp3"
+    speech_file_path = voice_messages_dir / voice_message
+
+    response = client.audio.speech.create(
+        model="tts-1",
+        voice="nova",
+        input=text
+    )
+
+    response.stream_to_file(speech_file_path)
+    return speech_file_path
+
