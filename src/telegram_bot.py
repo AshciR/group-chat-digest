@@ -10,6 +10,7 @@ from telegram import Update
 from telegram.error import Forbidden, BadRequest
 from telegram.ext import ApplicationBuilder, ContextTypes, CommandHandler, filters, MessageHandler
 from telegram.ext._application import Application, BaseHandler
+from telegram.constants import MessageEntityType
 
 from message_storage import (Message,
                              get_redis_client,
@@ -315,6 +316,11 @@ async def listen_for_messages_handler(update: Update, context: ContextTypes.DEFA
         await context.bot.send_message(chat_id=chat_id, text=NOT_WHITE_LISTED_FRIENDLY_MESSAGE)
         return
 
+    # We're not storing messages that contain spoilers in them
+    if does_message_contain_spoilers(update.message):
+        logger.debug(f"Message id {update.message.id} contained a spoiler. Not storing it")
+        return
+
     message_owner = Message.convert_update_to_owner(update)
     message = Message(
         message_id=update.message.id,
@@ -328,6 +334,11 @@ async def listen_for_messages_handler(update: Update, context: ContextTypes.DEFA
     redis_client = get_redis_client()
     count = store_message(redis_client, chat_id, message)
     logger.debug(f'Cache size: {count} from chat id: {chat_id}')
+
+
+def does_message_contain_spoilers(message) -> bool:
+    has_entity = any(entity.type == MessageEntityType.SPOILER for entity in message.entities)
+    return has_entity
 
 
 async def help_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):

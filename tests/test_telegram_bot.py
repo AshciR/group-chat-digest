@@ -1,4 +1,4 @@
-from unittest.mock import MagicMock
+from unittest.mock import MagicMock, Mock
 
 import pytest
 from telegram.ext import CommandHandler, MessageHandler
@@ -8,8 +8,10 @@ from telegram_bot import (
     format_message_for_openai, get_handlers, summary_handler, gist_handler, help_handler,
     listen_for_messages_handler, whisper_gist_handler, start_handler, get_admin_handlers,
     replay_messages_handler,
-    status_handler, broadcast_handler, whisper_handler, does_user_want_a_voice_message
+    status_handler, broadcast_handler, whisper_handler, does_user_want_a_voice_message, does_message_contain_spoilers
 )
+
+from telegram.constants import MessageEntityType
 
 
 @pytest.mark.asyncio
@@ -102,3 +104,85 @@ def test_get_admin_handlers():
     assert isinstance(handlers[2], CommandHandler)
     assert handlers[2].commands == frozenset({'alert'})
     assert handlers[2].callback == broadcast_handler
+
+
+@pytest.mark.asyncio
+async def test_does_message_contain_spoilers_with_spoiler_entity():
+    # Given: A message with a spoiler entity
+
+    update_with_spoiler = Mock()
+    update_with_spoiler.message = Mock()
+    update_with_spoiler.message.entities = [Mock(type=MessageEntityType.SPOILER)]
+
+    # When: We check if it contains spoilers
+    result = does_message_contain_spoilers(update_with_spoiler.message)
+
+    # Then: The function should return True
+    assert result is True, "Expected True, but got False"
+
+
+@pytest.mark.asyncio
+async def test_does_message_contain_spoilers_without_spoiler_entity():
+    # Given: A message without any spoiler entity
+
+    update_without_spoiler = Mock()
+    update_without_spoiler.message = Mock()
+    update_without_spoiler.message.entities = [Mock(type=MessageEntityType.BOLD)]
+
+    # When: We check if it contains spoilers
+    result = does_message_contain_spoilers(update_without_spoiler.message)
+
+    # Then: The function should return False
+    assert result is False, "Expected False, but got True"
+
+
+@pytest.mark.asyncio
+async def test_does_message_contain_spoilers_empty_entities():
+    # Given: A message with an empty entities list
+
+    update_empty_entities = Mock()
+    update_empty_entities.message = Mock()
+    update_empty_entities.message.entities = []
+
+    # When: We check if it contains spoilers
+    result = does_message_contain_spoilers(update_empty_entities.message)
+
+    # Then: The function should return False
+    assert result is False, "Expected False, but got True"
+
+
+@pytest.mark.asyncio
+async def test_does_message_contain_spoilers_multiple_entities_with_spoiler():
+    # Given: A message with multiple entities, one of which is a spoiler
+
+    update_mixed_entities_with_spoiler = Mock()
+    update_mixed_entities_with_spoiler.message = Mock()
+    update_mixed_entities_with_spoiler.message.entities = [
+        Mock(type=MessageEntityType.BOLD),
+        Mock(type=MessageEntityType.SPOILER),
+        Mock(type=MessageEntityType.ITALIC)
+    ]
+
+    # When: We check if it contains spoilers
+    result = does_message_contain_spoilers(update_mixed_entities_with_spoiler.message)
+
+    # Then: The function should return True
+    assert result is True, "Expected True, but got False"
+
+
+@pytest.mark.asyncio
+async def test_does_message_contain_spoilers_multiple_entities_without_spoiler():
+    # Given: A message with multiple entities, none of which are spoilers
+
+    update_mixed_entities_without_spoiler = Mock()
+    update_mixed_entities_without_spoiler.message = Mock()
+    update_mixed_entities_without_spoiler.message.entities = [
+        Mock(type=MessageEntityType.BOLD),
+        Mock(type=MessageEntityType.ITALIC)
+    ]
+
+    # When: We check if it contains spoilers
+    result = does_message_contain_spoilers(update_mixed_entities_without_spoiler.message)
+
+    # Then: The function should return False
+    assert result is False, "Expected False, but got True"
