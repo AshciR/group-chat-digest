@@ -9,7 +9,8 @@ from message_storage import (
     store_message,
     chat_exists,
     get_latest_n_messages,
-    configure_message_storage, MAX_MESSAGE_STORAGE, get_all_chat_ids
+    configure_message_storage, MAX_MESSAGE_STORAGE, get_all_chat_ids, ANALYTICS_COMMANDS_KEY, update_command_analytics,
+    get_commands_analytics
 )
 
 
@@ -244,6 +245,53 @@ def test_convert_update_to_owner(first_name, last_name, expected):
 
     # Then: It should be formatted correctly
     assert message_owner == expected
+
+
+@pytest.mark.asyncio
+async def test_update_command_analytics_increments_command_usage(stub_redis_client):
+    # Given: A Redis client fixture and a command name
+    command_name = "test_command"
+    stub_redis_client.hset(ANALYTICS_COMMANDS_KEY, command_name, '4')
+
+    # When: We call the function
+    latest_count = await update_command_analytics(stub_redis_client, command_name)
+
+    # Then: The count should be incremented
+    assert latest_count == 5
+
+
+@pytest.mark.asyncio
+async def test_update_command_analytics_initial_usage(stub_redis_client):
+    # Given: A Redis client fixture where the command is being used for the first time
+    command_name = "new_command"
+
+    # When: We call the function
+    latest_count = await update_command_analytics(stub_redis_client, command_name)
+
+    # Then: The count should start from 1
+    assert latest_count == 1
+
+
+@pytest.mark.asyncio
+async def test_get_commands_analytics_sorted_with_updates(stub_redis_client):
+    # Given: Use update_command_analytics to populate Redis
+    await update_command_analytics(stub_redis_client, "whisper")
+    await update_command_analytics(stub_redis_client, "gist")
+    await update_command_analytics(stub_redis_client, "summary")
+    await update_command_analytics(stub_redis_client, "whisper")  # Increment whisper
+    await update_command_analytics(stub_redis_client, "summary")  # Increment summary
+    await update_command_analytics(stub_redis_client, "summary")  # Increment summary
+
+    # When: We retrieve the commands analytics
+    result = await get_commands_analytics(stub_redis_client)
+
+    # Then: The dictionary should be sorted by keys
+    expected_result = {
+        "gist": 1,
+        "summary": 3,
+        "whisper": 2,
+    }
+    assert result == expected_result
 
 
 @pytest.fixture

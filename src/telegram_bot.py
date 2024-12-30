@@ -18,7 +18,7 @@ from message_storage import (Message,
                              chat_exists,
                              get_latest_n_messages,
                              DEFAULT_MESSAGE_STORAGE, configure_message_storage, MAX_MESSAGE_STORAGE,
-                             get_all_chat_ids)
+                             get_all_chat_ids, get_commands_analytics, update_command_analytics)
 from openai_utils import get_ai_client, summarize_messages_as_bullet_points, summarize_messages_as_paragraph, \
     ping_openai, OPEN_AI_MODEL, convert_to_speech
 from utils import remove_voice_message
@@ -38,6 +38,7 @@ HELP_COMMAND = 'help'
 REPLAY_COMMAND = 'replay'
 STATUS_COMMAND = 'status'
 BROADCAST_COMMAND = 'alert'
+ANALYTICS_COMMAND = 'analytics'
 
 NOT_WHITE_LISTED_FRIENDLY_MESSAGE = (
     "Welcome to the ChatNuff bot 🗣️🤖!\n\n"
@@ -111,9 +112,12 @@ async def summary_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
         await context.bot.send_voice(chat_id=chat_id, voice=path_to_voice_msg)
         remove_voice_message(path_to_voice_msg)
+        await update_command_analytics(redis_client, f"{SUMMARY_COMMAND}-voice")
         return
 
     await context.bot.send_message(chat_id=chat_id, text=summarized_msg)
+    await update_command_analytics(redis_client, SUMMARY_COMMAND)
+    return
 
 
 def _summarize_messages_as_paragraph(formatted_messages: str) -> str:
@@ -168,6 +172,9 @@ async def whisper_gist_handler(update: Update, context: ContextTypes.DEFAULT_TYP
             warning_msg = "Sorry, but I can't message you privately unless you start a chat with me first."
             await context.bot.send_message(chat_id=chat_id, text=warning_msg)
 
+    await update_command_analytics(redis_client, WHISPER_GIST_COMMAND)
+    return
+
 
 async def whisper_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
     """
@@ -218,10 +225,13 @@ async def whisper_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
             await context.bot.send_voice(chat_id=update.effective_user.id, voice=path_to_voice_msg)
             remove_voice_message(path_to_voice_msg)
+            await update_command_analytics(redis_client, f"{WHISPER_COMMAND}-voice")
             return
 
         await context.bot.send_message(chat_id=update.effective_user.id, text=private_summary)
+        await update_command_analytics(redis_client, WHISPER_COMMAND)
         return
+
     except Forbidden:
         warning_msg = "Sorry, but I can't message you privately unless you start a chat with me first."
         await context.bot.send_message(chat_id=chat_id, text=warning_msg)
@@ -260,6 +270,9 @@ async def gist_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
         prompt_message_schema = await format_message_for_openai(messages)
         summarized_msg = _summarize_messages_as_bullet_points(prompt_message_schema)
         await context.bot.send_message(chat_id=chat_id, text=summarized_msg)
+
+    await update_command_analytics(redis_client, GIST_COMMAND)
+    return
 
 
 async def _determine_number_of_messages_from_message_context(context):
@@ -380,6 +393,10 @@ Bot Artwork created by [@Spritewrench](https://spritewrench.com/) 🎨
 """
     await context.bot.send_message(chat_id=chat_id, text=help_text, parse_mode="markdown")
 
+    redis_client = get_redis_client()
+    await update_command_analytics(redis_client, HELP_COMMAND)
+    return
+
 
 #####################################################################
 # The following handlers are only for development and admin purposes!
@@ -474,6 +491,33 @@ async def broadcast_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
     return
 
 
+async def analytics_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    """
+    Reports the analytics of the bot usage.
+    Examples are: command usage, number of chats stores, etc.
+    NOTE: Should only be used by Admins
+    @param update:
+    @param context:
+    @return:
+    """
+
+    if not await _is_admin_user(update, context):
+        return
+
+    # Get the analytics for command usage. Can implement more later
+    redis = get_redis_client()
+    command_analytics = await get_commands_analytics(redis)
+
+    # Send message to all the chats
+    analytics_msg = "Command usage:\n" + "".join(
+        f"{command}: {count}  \n"
+        for command, count in command_analytics.items()
+    )
+
+    await update.message.reply_text(analytics_msg)
+    return
+
+
 async def _is_admin_user(update: Update, context: ContextTypes.DEFAULT_TYPE) -> bool:
     user_id = update.effective_user.id
     chat_id = update.effective_chat.id
@@ -559,6 +603,7 @@ def get_admin_handlers() -> list[BaseHandler]:
         CommandHandler(REPLAY_COMMAND, replay_messages_handler),
         CommandHandler(STATUS_COMMAND, status_handler),
         CommandHandler(BROADCAST_COMMAND, broadcast_handler),
+        CommandHandler(ANALYTICS_COMMAND, analytics_handler),
     ]
 
 

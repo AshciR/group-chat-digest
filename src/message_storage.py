@@ -13,9 +13,10 @@ logger = logging.getLogger(__name__)
 DEFAULT_MESSAGE_STORAGE = 100
 MAX_MESSAGE_STORAGE = 200
 
+ANALYTICS_COMMANDS_KEY = "analytics:commands"
+
 
 def configure_message_storage() -> bool:
-
     try:
         host = os.getenv('REDIS_HOST', "localhost")
         port = os.getenv('REDIS_PORT', 6379)
@@ -139,3 +140,23 @@ def get_all_chat_ids(redis_client: Redis) -> set[int]:
         for key in redis_client.keys()
     }
     return chat_ids
+
+
+async def update_command_analytics(redis_client: Redis, command_name: str) -> int:
+    # Redis will increment the count by 1 by default
+    latest_count = redis_client.hincrby(ANALYTICS_COMMANDS_KEY, command_name)
+    logger.debug(f"Updated {command_name} command usage to {latest_count}")
+    return latest_count
+
+
+async def get_commands_analytics(redis_client: Redis) -> dict[str, int]:
+    command_analytics = redis_client.hgetall(ANALYTICS_COMMANDS_KEY)
+
+    decoded_analytics = {
+        key.decode(): int(value.decode())
+        for key, value
+        in sorted(command_analytics.items(), key=lambda item: item[0].decode())
+    }
+
+    logger.debug(f"Getting commands analytics: {decoded_analytics}")
+    return decoded_analytics
