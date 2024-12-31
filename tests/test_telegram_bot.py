@@ -8,7 +8,8 @@ from telegram_bot import (
     format_message_for_openai, get_handlers, summary_handler, gist_handler, help_handler,
     listen_for_messages_handler, whisper_gist_handler, start_handler, get_admin_handlers,
     replay_messages_handler,
-    status_handler, broadcast_handler, whisper_handler, does_user_want_a_voice_message, does_message_contain_spoilers
+    status_handler, broadcast_handler, whisper_handler, does_user_want_a_voice_message, does_message_contain_spoilers,
+    analytics_handler
 )
 
 from telegram.constants import MessageEntityType
@@ -90,7 +91,7 @@ def test_get_handlers():
 def test_get_admin_handlers():
     handlers = get_admin_handlers()
 
-    assert len(handlers) == 3, "Expected 3 handlers"
+    assert len(handlers) == 4, "Expected 4 handlers"
 
     # Test CommandHandlers
     assert isinstance(handlers[0], CommandHandler)
@@ -104,6 +105,10 @@ def test_get_admin_handlers():
     assert isinstance(handlers[2], CommandHandler)
     assert handlers[2].commands == frozenset({'alert'})
     assert handlers[2].callback == broadcast_handler
+
+    assert isinstance(handlers[3], CommandHandler)
+    assert handlers[3].commands == frozenset({'analytics'})
+    assert handlers[3].callback == analytics_handler
 
 
 @pytest.mark.asyncio
