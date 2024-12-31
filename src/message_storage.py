@@ -138,6 +138,7 @@ def get_all_chat_ids(redis_client: Redis) -> set[int]:
     chat_ids = {
         int(key.decode('utf-8'))
         for key in redis_client.keys()
+        if key.decode('utf-8').lstrip('-').isdigit()    # Have to strip '-' b/c group chats are negative numbers
     }
     return chat_ids
 

@@ -33,6 +33,7 @@ GIST_COMMAND = 'gist'
 WHISPER_GIST_COMMAND = 'whspr'
 WHISPER_COMMAND = 'whisper'
 HELP_COMMAND = 'help'
+PRIVACY_COMMAND = 'privacy'
 
 # Admin commands
 REPLAY_COMMAND = 'replay'
@@ -356,7 +357,7 @@ def does_message_contain_spoilers(message) -> bool:
 
 async def help_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
     """
-    Command that summarizes the last N messages as paragraphs
+    Command that shows how to use the bot
     @param update:
     @param context:
     @return:
@@ -376,7 +377,8 @@ Available commands:
 /{GIST_COMMAND} : Gives you a bullet form of the last {DEFAULT_MESSAGE_STORAGE} messages.
 /{WHISPER_COMMAND} voice : Privately voice messages you the summary of the last {DEFAULT_MESSAGE_STORAGE} messages.
 /{WHISPER_GIST_COMMAND} : Privately messages you the bullet points of the last {DEFAULT_MESSAGE_STORAGE} messages.
-/{HELP_COMMAND} : Gives information about the bot.
+/{HELP_COMMAND} : Gives usage information about the bot.
+/{PRIVACY_COMMAND} : Gives privacy information about the bot.
 
 I can also summarize a certain number of messages if you provide me with a number.
 
@@ -395,6 +397,59 @@ Bot Artwork created by [@Spritewrench](https://spritewrench.com/) 🎨
 
     redis_client = get_redis_client()
     await update_command_analytics(redis_client, HELP_COMMAND)
+    return
+
+
+async def privacy_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    """
+    Command that shows the privacy info
+    @param update:
+    @param context:
+    @return:
+    """
+    chat_id = update.effective_chat.id
+
+    if not is_whitelisted(chat_id):
+        logger.info(f'chat id: {chat_id} attempted to use the bot but was not whitelisted')
+        await context.bot.send_message(chat_id=chat_id, text=NOT_WHITE_LISTED_FRIENDLY_MESSAGE)
+        return
+
+    privacy_policy = (
+        "**Privacy Policy for ChatNuffBot**\n\n"
+        "**Effective Date:** Dec 31, 2024\n\n"
+        "@ChatNuffBot (\"the Bot\") is committed to protecting your privacy. This Privacy Policy explains how we collect, use, and safeguard your information when you interact with the Bot.\n\n"
+        "**1. Information We Collect**\n"
+        "- **Messages**: The last 200 messages from group chats, including their metadata.\n"
+        "- **Metadata about Messages**:\n"
+        "  - `message_id`: A unique identifier for the message.\n"
+        "  - `content`: The text content of the message.\n"
+        "  - `owner_id`: The unique ID of the user who sent the message.\n"
+        "  - `owner_name`: The username or display name of the message sender.\n"
+        "  - `created_at`: The timestamp of when the message was sent.\n"
+        "- **Bot Command Usage**: Logs of commands issued to the Bot for analytics purposes.\n\n"
+        "**2. How We Use Your Information**\n"
+        "- To provide, maintain, and improve the Bot’s functionality, such as summarizing user messages.\n"
+        "- To analyze bot command usage for identifying and enhancing user value.\n\n"
+        "**3. Data Sharing and Disclosure**\n"
+        "- We do not sell, trade, or share your information with any third parties.\n\n"
+        "**4. Data Retention**\n"
+        "- Only the last 200 messages for a chat are retained at any point in time. This data is encrypted during transit and at rest.\n\n"
+        "**5. Your Rights**\n"
+        "- Access to, correction of, or deletion of collected message data is not provided.\n\n"
+        "**6. Data Security**\n"
+        "- Data is encrypted during transit and at rest to prevent unauthorized access.\n\n"
+        "**7. Third-Party Services**\n"
+        "- The Bot operates within the Telegram platform, which has its own privacy policy.\n\n"
+        "**8. Changes to This Privacy Policy**\n"
+        "- We may update this Privacy Policy from time to time. Please review it periodically.\n\n"
+        "**9. Contact Us**\n"
+        "If you have questions or concerns about this Privacy Policy, contact us at @Ashcir.\n"
+    )
+
+    await context.bot.send_message(chat_id=chat_id, text=privacy_policy, parse_mode="markdown")
+
+    redis_client = get_redis_client()
+    await update_command_analytics(redis_client, PRIVACY_COMMAND)
     return
 
 
@@ -594,6 +649,7 @@ def get_handlers() -> list[BaseHandler]:
         CommandHandler(HELP_COMMAND, help_handler),
         CommandHandler(WHISPER_GIST_COMMAND, whisper_gist_handler),
         CommandHandler(WHISPER_COMMAND, whisper_handler),
+        CommandHandler(PRIVACY_COMMAND, privacy_handler),
         MessageHandler(filters.TEXT & (~filters.COMMAND), listen_for_messages_handler)
     ]
 

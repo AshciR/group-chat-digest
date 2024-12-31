@@ -3,4 +3,5 @@ summary - Summarizes the last messages.
 gist - Gives you a bullet form of the last messages.
 whisper - Privately messages you the summary of the last messages.
 whspr - Privately messages you the bullet points of the last messages.
-help - Gives information about the bot.
+help - Gives usage information about the bot.
+privacy - Gives privacy information about the bot.
