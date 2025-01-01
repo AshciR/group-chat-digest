@@ -9,7 +9,7 @@ from telegram_bot import (
     listen_for_messages_handler, whisper_gist_handler, start_handler, get_admin_handlers,
     replay_messages_handler,
     status_handler, broadcast_handler, whisper_handler, does_user_want_a_voice_message, does_message_contain_spoilers,
-    analytics_handler
+    analytics_handler, privacy_handler
 )
 
 from telegram.constants import MessageEntityType
@@ -56,7 +56,7 @@ async def test_does_user_want_a_voice_message(args, expected):
 def test_get_handlers():
     handlers = get_handlers()
 
-    assert len(handlers) == 7, "Expected 7 handlers"
+    assert len(handlers) == 8, "Expected 8 handlers"
 
     # Test CommandHandlers
     assert isinstance(handlers[0], CommandHandler)
@@ -83,9 +83,13 @@ def test_get_handlers():
     assert handlers[5].commands == frozenset({'whisper'})
     assert handlers[5].callback == whisper_handler
 
+    assert isinstance(handlers[6], CommandHandler)
+    assert handlers[6].commands == frozenset({'privacy'})
+    assert handlers[6].callback == privacy_handler
+
     # Test MessageHandler
-    assert isinstance(handlers[6], MessageHandler)
-    assert handlers[6].callback == listen_for_messages_handler
+    assert isinstance(handlers[7], MessageHandler)
+    assert handlers[7].callback == listen_for_messages_handler
 
 
 def test_get_admin_handlers():
