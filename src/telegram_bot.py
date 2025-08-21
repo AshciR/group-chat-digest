@@ -463,7 +463,7 @@ async def replay_messages_handler(update: Update, context: ContextTypes.DEFAULT_
     @rtype: object
     """
 
-    if not _is_admin_user(update, context):
+    if not await _is_admin_user(update, context):
         return
 
     redis_client = get_redis_client()
@@ -487,7 +487,7 @@ async def status_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
     @rtype: object
     """
 
-    if not _is_admin_user(update, context):
+    if not await _is_admin_user(update, context):
         return
 
     chat_id = update.effective_chat.id

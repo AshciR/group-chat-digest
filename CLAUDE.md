@@ -8,14 +8,14 @@ This is a Telegram bot called "Chat Nuff Bot" that summarizes group chat message
 
 ## Development Commands
 
-### Using Rye (Recommended)
-- `rye sync` - Initialize virtual environment and install dependencies
-- `rye run dev` - Start the application with Docker Compose (detached mode)
-- `rye run build-dev` - Build and start with Docker Compose (--build flag)
-- `rye run stop` - Stop Docker containers
-- `rye run redis` - Start only the Redis container
-- `rye run tests` - Run tests with pytest in parallel
-- `rye run lint` - Run Ruff linter on source code
+### Using uv (Recommended)
+- `uv sync` - Initialize virtual environment and install dependencies
+- `docker-compose up -d` - Start the application with Docker Compose (detached mode)
+- `docker-compose up -d --build` - Build and start with Docker Compose (--build flag)
+- `docker-compose down` - Stop Docker containers
+- `docker-compose up -d redis` - Start only the Redis container
+- `uv run pytest -n auto tests --spec` - Run tests with pytest in parallel
+- `uv run ruff check src/` - Run Ruff linter on source code
 
 ### Alternative Commands
 - `docker-compose up -d` - Start application without building
