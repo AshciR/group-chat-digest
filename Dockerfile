@@ -33,7 +33,7 @@ ENV PATH="$WORKDIR/.venv/bin:$PATH"
 RUN uv venv && uv pip install --no-cache-dir -r requirements.lock
 
 # Make HTTP and Redis ports available to the world outside this container
-EXPOSE 80
+EXPOSE 8000
 EXPOSE 6379
 
 # Run app.py when the container launches

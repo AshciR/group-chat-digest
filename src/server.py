@@ -17,9 +17,18 @@ async def health(request: Request):
     return JSONResponse({'status': 'healthy'})
 
 
+async def pong(request: Request):
+    """
+    Default endpoint. Used to keep the server alive and not meant to serve anything useful.
+    Returns a JSON response with ok.
+    """
+    logger.info("/ was hit")
+    return JSONResponse({'response': '200 OK'})
+
 web_app = Starlette(
     routes=[
         Route("/status", health, methods=["GET"]),
+        Route("/", pong, methods=["GET"]),
     ]
 )
 

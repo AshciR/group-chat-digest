@@ -47,7 +47,7 @@ def configure_message_storage() -> bool:
         logger.exception("Timed out while connecting to Redis.")
         return False
     except Exception as ex:
-        logger.exception("Unable to connect to Redis. See exception details")
+        logger.exception(f"Unable to connect to Redis. See exception details. {ex}")
         return False
 
 

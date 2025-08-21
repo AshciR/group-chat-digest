@@ -10,17 +10,17 @@ gist of the last N messages within the chat.
 1. Create a `.env` file based on `.env.template`. 
 2. Fill in the API keys as required. Use your own keys, or ask the maintainers.
 
-### A. Using Rye
-It's suggested to use the python build tool, [Rye](https://rye-up.com/guide/).
+### A. Using uv
+It's suggested to use the python build tool, [uv](https://docs.astral.sh/uv/).
 Installation guides can be found on their site.
 
-After Rye is installed, you run the following:
+After uv is installed, you run the following:
 1. Initialize the virtual environment and download the dependencies
-`rye sync`
-2. Run the application via a run script
-`rye run dev`
-3. Stop the application via a run script
-`rye run stop`
+`uv sync`
+2. Run the application
+`docker-compose up -d`
+3. Stop the application
+`docker-compose down`
 
 ### B. Spinning Docker up manually
 You can run the application as a docker containers with the following.
@@ -43,17 +43,17 @@ docker build . -t <tag-the-image>
 ### C. Running from PyCharm
 1. Create a run config using `main.py`
 2. Set an LOCAL env variable (optional)
-3. Start the Redis database locally `rye run redis`
+3. Start the Redis database locally `docker-compose up -d redis`
 4. Run `main.py`
 
 ## Testing
 This project contains tests. We use Pytest for the testing framework.
 Tests can be run 2 ways:
 
-### A. Using Rye
-`rye run tests`
+### A. Using uv
+`uv run pytest -n auto tests --spec`
 
-This executes the Rye test script.
+This runs tests with pytest in parallel mode.
 
 ### B. Using Pytest directly
 `pytest -n auto tests --spec`
