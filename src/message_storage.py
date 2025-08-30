@@ -1,12 +1,13 @@
 import json
 import logging
 import os
-from dataclasses import dataclass, asdict
+from dataclasses import asdict
 
 from redis import Redis
-from telegram import Update
 
+from models import Message
 from utils import str_to_bool
+from encryption_utils import encrypt_message_content, decrypt_message_content
 
 logger = logging.getLogger(__name__)
 
@@ -51,22 +52,6 @@ def configure_message_storage() -> bool:
         return False
 
 
-@dataclass
-class Message:
-    """Stores the content of the messages"""
-    message_id: int
-    content: str
-    owner_id: int
-    owner_name: str
-    created_at: str
-
-    @staticmethod
-    def convert_update_to_owner(update: Update):
-        if not update.message.from_user.last_name:
-            return f"{update.message.from_user.first_name}"
-
-        return f"{update.message.from_user.first_name} {update.message.from_user.last_name}"
-
 
 def get_redis_client() -> Redis:
     """
@@ -86,7 +71,15 @@ def store_message(redis_client: Redis,
     @return: the number of messages in the queue
     """
 
-    serialized_message = _serialize_message(message)
+    encrypted_content = encrypt_message_content(message.content)
+    encrypted_message = Message(
+        message_id=message.message_id,
+        content=encrypted_content,
+        owner_id=message.owner_id,
+        owner_name=message.owner_name,
+        created_at=message.created_at
+    )
+    serialized_message = _serialize_message(encrypted_message)
     chat_key = str(chat_id)
 
     redis_client.lpush(chat_key, serialized_message)
@@ -138,7 +131,16 @@ def get_latest_n_messages(
 
     messages_json = [json.loads(msg) for msg in serialized_messages]
     messages = [Message(**msg) for msg in messages_json]
-    return messages
+    decrypted_messages = [
+        Message(
+            message_id=msg.message_id,
+            content=decrypt_message_content(msg.content),
+            owner_id=msg.owner_id,
+            owner_name=msg.owner_name,
+            created_at=msg.created_at
+        ) for msg in messages
+    ]
+    return decrypted_messages
 
 
 def get_all_chat_ids(redis_client: Redis) -> set[int]:

@@ -33,7 +33,11 @@ This is a Telegram bot called "Chat Nuff Bot" that summarizes group chat message
 - Admin commands: `/replay`, `/status`, `/alert`, `/analytics`
 - Message listener that stores all non-spoiler messages
 
-**message_storage.py**: Manages Redis operations for message persistence. Uses a Message dataclass and implements FIFO storage limited to 200 messages per chat.
+**models.py**: Contains shared data models, primarily the Message dataclass used throughout the application.
+
+**message_storage.py**: Manages Redis operations for message persistence. Implements FIFO storage limited to 200 messages per chat with integrated encryption support.
+
+**encryption_utils.py**: Handles application-level encryption for message content using Fernet symmetric encryption. Provides backward compatibility for unencrypted messages during migration.
 
 **openai_utils.py**: Handles OpenAI API integration for text summarization and text-to-speech conversion using GPT-4o-mini model.
 
@@ -43,14 +47,15 @@ This is a Telegram bot called "Chat Nuff Bot" that summarizes group chat message
 
 ### Message Flow
 1. Telegram messages are received via webhook/polling
-2. Messages are stored in Redis with chat_id as key
-3. Summary commands retrieve N messages, format them, and send to OpenAI
+2. Messages are optionally encrypted (if enabled) and stored in Redis with chat_id as key
+3. Summary commands retrieve N messages, decrypt them if needed, format them, and send to OpenAI
 4. Responses can be text or voice messages delivered publicly or privately
 
 ### Key Configuration
 - Redis connection configured via environment variables (host, port, TLS, timeout)
 - OpenAI API key required for summarization and TTS features
 - Telegram bot token required for bot functionality
+- Message encryption configured via ENCRYPTION_ENABLED and ENCRYPTION_KEY env vars
 - Supports local development mode via LOCAL env var
 
 ## Environment Setup
@@ -59,6 +64,8 @@ Copy `.env.template` to `.env` and configure:
 - `TELEGRAM_API_KEY` - Bot token from BotFather
 - `OPENAI_API_KEY` - OpenAI API key for GPT and TTS
 - Redis connection settings (defaults work for local development)
+- `ENCRYPTION_KEY` - Base64-encoded encryption key (generate with `python generate_encryption_key.py`)
+- `ENCRYPTION_ENABLED` - Set to True to enable message content encryption
 
 ## Testing
 

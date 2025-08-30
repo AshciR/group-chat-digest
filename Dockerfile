@@ -21,16 +21,15 @@ ENV PYTHONPATH="/app/src:$PYTHONPATH"
 # Set the working directory in the container
 WORKDIR $WORKDIR
 
-# Copy the requirements and src code
-COPY requirements.lock ./
+# Copy the uv files and src code
+COPY pyproject.toml uv.lock ./
 COPY src src
 
 # Install uv. UV is a super fast package manager in the Python ecosystem.
-# It also works with pip and pip tools.
 RUN pip install uv
 # UV will create a .venv directory for us. We need to add it to system path to gain access to the binaries
 ENV PATH="$WORKDIR/.venv/bin:$PATH"
-RUN uv venv && uv pip install --no-cache-dir -r requirements.lock
+RUN uv sync --frozen
 
 # Make HTTP and Redis ports available to the world outside this container
 EXPOSE 8000

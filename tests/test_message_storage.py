@@ -1,17 +1,19 @@
+import os
 from datetime import datetime
 from unittest.mock import Mock
 
 import pytest
 from fakeredis import FakeRedis
 
+from encryption_utils import generate_key, encrypt_message_content, decrypt_message_content
 from message_storage import (
-    Message,
     store_message,
     chat_exists,
     get_latest_n_messages,
     configure_message_storage, MAX_MESSAGE_STORAGE, get_all_chat_ids, ANALYTICS_COMMANDS_KEY, update_command_analytics,
     get_commands_analytics
 )
+from models import Message
 
 
 def test_store_message(stub_redis_client):
@@ -292,6 +294,83 @@ async def test_get_commands_analytics_sorted_with_updates(stub_redis_client):
         "whisper": 2,
     }
     assert result == expected_result
+
+
+@pytest.mark.asyncio
+async def test_encryption_migration_scenario(mocker, stub_redis_client):
+    # Given: Redis has older unencrypted messages (encryption was disabled)
+    mocker.patch.dict(os.environ, {'ENCRYPTION_ENABLED': 'False'}, clear=False)
+
+    chat_id = -100
+    old_unencrypted_message = Message(
+        message_id=100,
+        content='Old unencrypted message',
+        owner_id=901,
+        owner_name='Unit Tester',
+        created_at=datetime.now().isoformat()
+    )
+    store_message(stub_redis_client, chat_id, old_unencrypted_message)
+
+    # When: Encryption is turned on with a real key and new messages are stored
+    test_key = generate_key()  # Generate a proper Fernet key
+    mocker.patch.dict(os.environ, {
+        'ENCRYPTION_ENABLED': 'True',
+        'ENCRYPTION_KEY': test_key
+    }, clear=False)
+
+    new_message_after_encryption = Message(
+        message_id=101,
+        content='New message after encryption enabled',
+        owner_id=902,
+        owner_name='Unit Tester 2',
+        created_at=datetime.now().isoformat()
+    )
+    store_message(stub_redis_client, chat_id, new_message_after_encryption)
+
+    # Then: Both older unencrypted and newer encrypted messages are correctly retrieved
+    retrieved_messages = get_latest_n_messages(stub_redis_client, chat_id, 2)
+
+    assert len(retrieved_messages) == 2
+    # Latest message first (Redis FIFO with lpush/lrange)
+    assert retrieved_messages[0].content == 'New message after encryption enabled'
+    assert retrieved_messages[1].content == 'Old unencrypted message'
+    # Verify message IDs to ensure proper ordering
+    assert retrieved_messages[0].message_id == 101
+    assert retrieved_messages[1].message_id == 100
+
+
+def test_message_stored_as_encrypted_string(mocker, stub_redis_client):
+    # Given: Encryption is turned on
+    test_key = generate_key()
+    mocker.patch.dict(os.environ, {
+        'ENCRYPTION_ENABLED': 'True',
+        'ENCRYPTION_KEY': test_key
+    }, clear=False)
+    
+    chat_id = -100
+    message = Message(
+        message_id=150,
+        content='Secret message content',
+        owner_id=901,
+        owner_name='Unit Tester',
+        created_at=datetime.now().isoformat()
+    )
+    
+    # When: I store a message
+    store_message(stub_redis_client, chat_id, message)
+    
+    # Then: The message is stored as an encrypted string
+    raw_stored_data = stub_redis_client.lrange(str(chat_id), 0, -1)
+    assert len(raw_stored_data) == 1
+    
+    # Parse the stored message to check its content
+    import json
+    stored_message_dict = json.loads(raw_stored_data[0])
+    stored_content = stored_message_dict['content']
+    
+    # Verify it's encrypted (starts with ENC: prefix)
+    assert stored_content.startswith('ENC:')
+    assert stored_content != 'Secret message content'
 
 
 @pytest.fixture
