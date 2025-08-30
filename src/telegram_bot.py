@@ -12,8 +12,8 @@ from telegram.ext import ApplicationBuilder, ContextTypes, CommandHandler, filte
 from telegram.ext._application import Application, BaseHandler
 from telegram.constants import MessageEntityType
 
-from message_storage import (Message,
-                             get_redis_client,
+from models import Message
+from message_storage import (get_redis_client,
                              store_message,
                              chat_exists,
                              get_latest_n_messages,

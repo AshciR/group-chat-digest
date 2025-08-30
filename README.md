@@ -9,6 +9,7 @@ gist of the last N messages within the chat.
 ## How to run
 1. Create a `.env` file based on `.env.template`. 
 2. Fill in the API keys as required. Use your own keys, or ask the maintainers.
+3. (Optional) Configure encryption settings (see Security section below).
 
 ### A. Using uv
 It's suggested to use the python build tool, [uv](https://docs.astral.sh/uv/).
@@ -61,6 +62,33 @@ This runs tests with pytest in parallel mode.
 Runs Pytest in a parallel mode. Note: We create atom tests that facilitate this.
 Meaning, our practice is not writing tests that share state, or depending on
 the results from other tests.
+
+## Security
+
+### Message Encryption
+
+The bot supports application-level encryption for message content stored in Redis:
+
+- **Encryption Library**: Uses `cryptography` library with Fernet symmetric encryption
+- **What's Encrypted**: Only message content (PII data) - metadata remains unencrypted for functionality
+- **Backward Compatibility**: Handles both encrypted and unencrypted messages during migration
+
+### Setup Encryption
+
+1. **Generate an encryption key**:
+   ```shell
+   uv run python generate_encryption_key.py
+   ```
+
+2. **Configure environment variables** in your `.env` file:
+   ```
+   ENCRYPTION_ENABLED=True
+   ENCRYPTION_KEY=<generated-key-from-step-1>
+   ```
+
+3. **Deploy safely**:
+   - Configure the encryption key
+   - Enable encryption with `ENCRYPTION_ENABLED=True`
 
 ## Notes
 The application requires a Redis cache to store messages.
