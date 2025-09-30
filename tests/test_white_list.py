@@ -21,8 +21,9 @@ def test_is_whitelisted_returns_true():
         -1001598674948,  # Outside 4ever
         -4170925867,  # Staging Chat
         -4239122711,  # Dev Chat
+        -1001730764364,  # Heart of the Cards group
         170626720,  # Richie (admin)
-        320338590  # Alrick (admin)
+        320338590  # Alrick (admin),
     ]
 
     for chat_id in expected_whitelisted_ids:

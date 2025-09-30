@@ -7,6 +7,7 @@ def get_white_list() -> list[int]:
         -1001214465416,  # Fidelity chat
         -4170925867,  # Staging Chat
         -4239122711,  # Dev Chat
+        -1001730764364, # Heart of the Cards group
         *get_admin_user_list()  # Telegram treats user's chats and user id as the same thing
     ]
 
