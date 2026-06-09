@@ -1,0 +1,20 @@
+🤖 @ChatNuffBot Update - Version 0.5.0
+
+Hey @ChatNuffBot users! This release is all about smarter, sharper summaries. Here's what's new:
+
+✨ New Features & Improvements
+- Smarter summary engine: We've upgraded to a newer language model and rebuilt the summarizer prompts from the ground up. /summary and /gist now produce tighter, more focused TL;DRs that group messages by topic.
+- More consistent results: Lowered the model's randomness so re-running /summary on the same chat gives you a more predictable, reliable answer.
+
+🐞 Bug Fixes & Minor Improvements
+- More robust handling of messages that contain punctuation like semicolons (previously could confuse the summarizer).
+- Updated underlying libraries for better stability and security.
+- Various under-the-hood improvements.
+
+📢 We Want Your Feedback!
+Thanks for being part of the @ChatNuffBot community! If you notice a difference in your summaries (good or bad), or run into any issues, reach out to @Ashcir — your feedback shapes what comes next.
+
+Happy chatting! 🤖
+
+@Ashcir
+@ChatNuffBot Team

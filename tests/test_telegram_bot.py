@@ -28,7 +28,7 @@ async def test_format_message_for_openai():
     result = await format_message_for_openai(messages)
 
     # Then: They're formatted correctly
-    expected_result = "Alice: Hello;Bob: Hi;Charlie: Bye?"
+    expected_result = "[Alice] Hello\n[Bob] Hi\n[Charlie] Bye?"
     assert result == expected_result, f"Expected '{expected_result}', but got '{result}'"
 
 

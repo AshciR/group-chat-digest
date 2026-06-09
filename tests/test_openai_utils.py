@@ -10,7 +10,7 @@ async def test_convert_to_speech(mocker, tmp_path):
     # Given: A mocked OpenAI client and text input
     mock_client = MagicMock()
     mock_response = MagicMock()
-    mock_client.audio.speech.create.return_value = mock_response
+    mock_client.audio.speech.with_streaming_response.create.return_value.__enter__.return_value = mock_response
     mock_response.stream_to_file = MagicMock()
 
     text = "Hello, this is a test."
@@ -28,7 +28,7 @@ async def test_convert_to_speech(mocker, tmp_path):
     assert result == expected_file_path, f"Expected path '{expected_file_path}', but got '{result}'"
 
     # And: The OpenAI client creates the speech with correct parameters
-    mock_client.audio.speech.create.assert_called_once_with(
+    mock_client.audio.speech.with_streaming_response.create.assert_called_once_with(
         model="tts-1",
         voice="nova",
         input=text
