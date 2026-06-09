@@ -299,8 +299,7 @@ async def does_user_want_a_voice_message(context: ContextTypes.DEFAULT_TYPE) -> 
 
 
 async def format_message_for_openai(messages: list[Message]) -> str:
-    messages_content = [f"{msg.owner_name}: {msg.content}" for msg in messages]
-    prompt_message_schema = ';'.join(messages_content)
+    prompt_message_schema = "\n".join(f"[{msg.owner_name}] {msg.content}" for msg in messages)
     return prompt_message_schema
 
 
