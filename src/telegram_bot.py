@@ -20,7 +20,7 @@ from message_storage import (get_redis_client,
                              DEFAULT_MESSAGE_STORAGE, configure_message_storage, MAX_MESSAGE_STORAGE,
                              get_all_chat_ids, get_commands_analytics, update_command_analytics)
 from openai_utils import get_ai_client, summarize_messages_as_bullet_points, summarize_messages_as_paragraph, \
-    ping_openai, OPEN_AI_MODEL, convert_to_speech
+    ping_openai, LLM_MODEL, convert_to_speech
 from utils import remove_voice_message
 from white_list import is_whitelisted, is_admin, get_admin_user_list
 
@@ -612,7 +612,7 @@ async def _get_open_ai_status(ai_client: OpenAI) -> str:
     open_ai_response = ping_openai(ai_client)
     open_ai_msg = f"""OpenAI 
 Status: {open_ai_response}
-Model: {OPEN_AI_MODEL}
+Model: {LLM_MODEL}
     """
     return open_ai_msg
 
