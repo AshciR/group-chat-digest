@@ -70,7 +70,6 @@ def summarize_messages_as_paragraph(client: OpenAI, messages: str) -> str:
     """
     completion = litellm.completion(
         model=LLM_MODEL,
-        temperature=0.3,
         max_completion_tokens=400,
         messages=[
             {"role": "system", "content": PARAGRAPH_SYSTEM_PROMPT},
@@ -89,7 +88,6 @@ def summarize_messages_as_bullet_points(client: OpenAI, messages: str) -> str:
     """
     completion = litellm.completion(
         model=LLM_MODEL,
-        temperature=0.3,
         max_completion_tokens=300,
         messages=[
             {"role": "system", "content": BULLETS_SYSTEM_PROMPT},
