@@ -1,15 +1,17 @@
-from unittest.mock import MagicMock, Mock
+from unittest.mock import AsyncMock, MagicMock, Mock
 
 import pytest
+from telegram import Update
 from telegram.ext import CommandHandler, MessageHandler
 
 from message_storage import Message
+from openai_utils import SummaryGenerationError
 from telegram_bot import (
     format_message_for_openai, get_handlers, summary_handler, gist_handler, help_handler,
     listen_for_messages_handler, whisper_gist_handler, start_handler, get_admin_handlers,
     replay_messages_handler,
     status_handler, broadcast_handler, whisper_handler, does_user_want_a_voice_message, does_message_contain_spoilers,
-    analytics_handler, privacy_handler
+    analytics_handler, privacy_handler, error_handler, SUMMARY_FAILED_MESSAGE
 )
 
 from telegram.constants import MessageEntityType
@@ -195,3 +197,53 @@ async def test_does_message_contain_spoilers_multiple_entities_without_spoiler()
 
     # Then: The function should return False
     assert result is False, "Expected False, but got True"
+
+
+def _mock_update(chat_id: int) -> Mock:
+    update = Mock(spec=Update)
+    update.effective_chat.id = chat_id
+    return update
+
+
+@pytest.mark.asyncio
+async def test_error_handler_notifies_chat_when_summary_fails():
+    # Given: A summary command failed to generate a summary
+    update = _mock_update(chat_id=-123)
+    context = MagicMock()
+    context.bot.send_message = AsyncMock()
+    context.error = SummaryGenerationError("No usable summary returned")
+
+    # When: The error handler runs
+    await error_handler(update, context)
+
+    # Then: The chat is told the summary failed
+    context.bot.send_message.assert_awaited_once_with(chat_id=-123, text=SUMMARY_FAILED_MESSAGE)
+
+
+@pytest.mark.asyncio
+async def test_error_handler_does_not_notify_chat_for_other_errors():
+    # Given: A handler failed for an unrelated reason
+    update = _mock_update(chat_id=-123)
+    context = MagicMock()
+    context.bot.send_message = AsyncMock()
+    context.error = ValueError("Something else broke")
+
+    # When: The error handler runs
+    await error_handler(update, context)
+
+    # Then: The chat is not messaged
+    context.bot.send_message.assert_not_awaited()
+
+
+@pytest.mark.asyncio
+async def test_error_handler_handles_errors_without_an_update():
+    # Given: An error happened outside of an update (e.g. during polling)
+    context = MagicMock()
+    context.bot.send_message = AsyncMock()
+    context.error = SummaryGenerationError("No usable summary returned")
+
+    # When: The error handler runs
+    await error_handler(None, context)
+
+    # Then: The chat is not messaged
+    context.bot.send_message.assert_not_awaited()

@@ -1,3 +1,4 @@
+import logging
 import os
 import uuid
 from pathlib import Path
@@ -10,6 +11,18 @@ load_dotenv()
 LLM_MODEL = os.getenv("LLM_MODEL", "gpt-5.4-mini")
 openai_api_key = os.getenv("OPENAI_API_KEY", "fake-key")  # Need to add a default for the tests to work
 open_client_singleton = OpenAI(api_key=openai_api_key)
+
+logger = logging.getLogger(__name__)
+
+# Reasoning models count their reasoning tokens against max_completion_tokens,
+# so the cap has to leave room for both the reasoning and the visible summary.
+# The summary length itself is controlled by the system prompts.
+SUMMARY_MAX_COMPLETION_TOKENS = 2000
+SUMMARY_REASONING_EFFORT = "low"
+
+
+class SummaryGenerationError(Exception):
+    """Raised when the LLM does not return a usable summary."""
 
 
 def get_ai_client() -> OpenAI:
@@ -61,6 +74,35 @@ Example output:
 - Bob is in; Charlie can't make it"""
 
 
+def _summarize(system_prompt: str, messages: str) -> str:
+    """
+    Sends the chat log to the LLM and returns the summary.
+    @param system_prompt: the prompt describing the summary format
+    @param messages: chat log as `[Sender] message` per line, chronological.
+    @return: the summarized messages
+    @raise SummaryGenerationError: if the LLM returns an empty or truncated summary
+    """
+    completion = litellm.completion(
+        model=LLM_MODEL,
+        max_completion_tokens=SUMMARY_MAX_COMPLETION_TOKENS,
+        reasoning_effort=SUMMARY_REASONING_EFFORT,
+        drop_params=True,  # Lets non-reasoning models ignore reasoning_effort
+        messages=[
+            {"role": "system", "content": system_prompt},
+            {"role": "user", "content": messages}
+        ]
+    )
+    choice = completion.choices[0]
+    summary = choice.message.content
+
+    if not summary or not summary.strip() or choice.finish_reason == "length":
+        logger.error(f"LLM did not return a usable summary. Model: {LLM_MODEL}, "
+                     f"finish reason: {choice.finish_reason}, usage: {completion.usage}")
+        raise SummaryGenerationError(f"No usable summary returned. Finish reason: {choice.finish_reason}")
+
+    return summary
+
+
 def summarize_messages_as_paragraph(client: OpenAI, messages: str) -> str:
     """
     Uses an LLM (via LiteLLM) to summarize messages as a short multi-paragraph TL;DR.
@@ -68,15 +110,7 @@ def summarize_messages_as_paragraph(client: OpenAI, messages: str) -> str:
     @param messages: chat log as `[Sender] message` per line, chronological.
     @return: the summarized messages
     """
-    completion = litellm.completion(
-        model=LLM_MODEL,
-        max_completion_tokens=400,
-        messages=[
-            {"role": "system", "content": PARAGRAPH_SYSTEM_PROMPT},
-            {"role": "user", "content": messages}
-        ]
-    )
-    return completion.choices[0].message.content
+    return _summarize(PARAGRAPH_SYSTEM_PROMPT, messages)
 
 
 def summarize_messages_as_bullet_points(client: OpenAI, messages: str) -> str:
@@ -86,15 +120,7 @@ def summarize_messages_as_bullet_points(client: OpenAI, messages: str) -> str:
     @param messages: chat log as `[Sender] message` per line, chronological.
     @return: the summarized messages
     """
-    completion = litellm.completion(
-        model=LLM_MODEL,
-        max_completion_tokens=300,
-        messages=[
-            {"role": "system", "content": BULLETS_SYSTEM_PROMPT},
-            {"role": "user", "content": messages}
-        ]
-    )
-    return completion.choices[0].message.content
+    return _summarize(BULLETS_SYSTEM_PROMPT, messages)
 
 
 def ping_openai(client: OpenAI) -> str:

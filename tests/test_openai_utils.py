@@ -2,7 +2,56 @@ from unittest.mock import MagicMock
 
 import pytest
 
-from openai_utils import convert_to_speech
+from openai_utils import (
+    convert_to_speech, summarize_messages_as_bullet_points, summarize_messages_as_paragraph,
+    SummaryGenerationError, SUMMARY_MAX_COMPLETION_TOKENS, SUMMARY_REASONING_EFFORT,
+    BULLETS_SYSTEM_PROMPT, PARAGRAPH_SYSTEM_PROMPT
+)
+
+
+def _mock_completion(mocker, content, finish_reason="stop"):
+    completion = MagicMock()
+    completion.choices[0].message.content = content
+    completion.choices[0].finish_reason = finish_reason
+    return mocker.patch("openai_utils.litellm.completion", return_value=completion)
+
+
+@pytest.mark.parametrize("summarize, system_prompt", [
+    (summarize_messages_as_paragraph, PARAGRAPH_SYSTEM_PROMPT),
+    (summarize_messages_as_bullet_points, BULLETS_SYSTEM_PROMPT),
+])
+def test_summarize_messages_returns_the_summary(mocker, summarize, system_prompt):
+    # Given: The LLM returns a summary
+    mock_completion = _mock_completion(mocker, "Alice and Bob made plans")
+
+    # When: We summarize the messages
+    result = summarize(MagicMock(), "[Alice] hi\n[Bob] hello")
+
+    # Then: The summary is returned
+    assert result == "Alice and Bob made plans"
+
+    # And: The call leaves room for reasoning tokens
+    kwargs = mock_completion.call_args.kwargs
+    assert kwargs["max_completion_tokens"] == SUMMARY_MAX_COMPLETION_TOKENS
+    assert kwargs["reasoning_effort"] == SUMMARY_REASONING_EFFORT
+    assert kwargs["drop_params"] is True
+    assert kwargs["messages"][0] == {"role": "system", "content": system_prompt}
+
+
+@pytest.mark.parametrize("summarize", [summarize_messages_as_paragraph, summarize_messages_as_bullet_points])
+@pytest.mark.parametrize("content, finish_reason", [
+    ("", "length"),  # Reasoning tokens used up the whole budget
+    (None, "stop"),  # No content at all
+    ("   \n", "stop"),  # Whitespace only
+    ("- Alice proposed hanging", "length"),  # Summary was cut off
+])
+def test_summarize_messages_raises_when_summary_is_unusable(mocker, summarize, content, finish_reason):
+    # Given: The LLM returns an empty or truncated summary
+    _mock_completion(mocker, content, finish_reason)
+
+    # When / Then: Summarizing raises an error instead of returning it
+    with pytest.raises(SummaryGenerationError):
+        summarize(MagicMock(), "[Alice] hi\n[Bob] hello")
 
 
 @pytest.mark.asyncio

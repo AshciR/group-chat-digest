@@ -20,7 +20,7 @@ from message_storage import (get_redis_client,
                              DEFAULT_MESSAGE_STORAGE, configure_message_storage, MAX_MESSAGE_STORAGE,
                              get_all_chat_ids, get_commands_analytics, update_command_analytics)
 from openai_utils import get_ai_client, summarize_messages_as_bullet_points, summarize_messages_as_paragraph, \
-    ping_openai, LLM_MODEL, convert_to_speech
+    ping_openai, LLM_MODEL, convert_to_speech, SummaryGenerationError
 from utils import remove_voice_message
 from white_list import is_whitelisted, is_admin, get_admin_user_list
 
@@ -46,6 +46,8 @@ NOT_WHITE_LISTED_FRIENDLY_MESSAGE = (
     "Currently, you don't have permission to give me commands in this chat. "
     "However, I can respond to you privately here if you use me in chats where I have the necessary permissions."
 )
+
+SUMMARY_FAILED_MESSAGE = "Sorry, I couldn't summarize the messages this time. Please try again in a bit."
 
 
 async def start_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
@@ -616,6 +618,28 @@ Model: {LLM_MODEL}
     return open_ai_msg
 
 
+async def error_handler(update: object, context: ContextTypes.DEFAULT_TYPE):
+    """
+    Logs any exception raised by a handler, so failures are not silent.
+    Lets the chat know when a summary could not be generated.
+    @param update:
+    @param context:
+    @return:
+    """
+    logger.error("Exception while handling an update", exc_info=context.error)
+
+    if not isinstance(context.error, SummaryGenerationError):
+        return
+
+    if not isinstance(update, Update) or update.effective_chat is None:
+        return
+
+    try:
+        await context.bot.send_message(chat_id=update.effective_chat.id, text=SUMMARY_FAILED_MESSAGE)
+    except Exception:
+        logger.exception(f"Failed to notify chat id: {update.effective_chat.id} about the summary failure")
+
+
 def get_application():
     load_dotenv()
 
@@ -636,6 +660,8 @@ def get_application():
 
     for handler in handlers:
         application.add_handler(handler)
+
+    application.add_error_handler(error_handler)
 
     return application
 
