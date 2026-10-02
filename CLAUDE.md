@@ -39,7 +39,7 @@ This is a Telegram bot called "Chat Nuff Bot" that summarizes group chat message
 
 **encryption_utils.py**: Handles application-level encryption for message content using Fernet symmetric encryption. Provides backward compatibility for unencrypted messages during migration.
 
-**openai_utils.py**: Handles OpenAI API integration for text summarization and text-to-speech conversion using GPT-4o-mini model.
+**summarization.py**: Handles LLM-agnostic text summarization via LiteLLM (model set by the LLM_MODEL env var) and text-to-speech conversion via the OpenAI SDK.
 
 **server.py**: Simple Starlette web server providing health check endpoint at `/status`.
 
