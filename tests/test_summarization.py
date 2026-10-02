@@ -2,7 +2,7 @@ from unittest.mock import MagicMock
 
 import pytest
 
-from openai_utils import (
+from summarization import (
     convert_to_speech, summarize_messages_as_bullet_points, summarize_messages_as_paragraph,
     SummaryGenerationError, SUMMARY_MAX_COMPLETION_TOKENS, SUMMARY_REASONING_EFFORT,
     BULLETS_SYSTEM_PROMPT, PARAGRAPH_SYSTEM_PROMPT
@@ -13,7 +13,7 @@ def _mock_completion(mocker, content, finish_reason="stop"):
     completion = MagicMock()
     completion.choices[0].message.content = content
     completion.choices[0].finish_reason = finish_reason
-    return mocker.patch("openai_utils.litellm.completion", return_value=completion)
+    return mocker.patch("summarization.litellm.completion", return_value=completion)
 
 
 @pytest.mark.parametrize("summarize, system_prompt", [

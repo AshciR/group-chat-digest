@@ -5,7 +5,7 @@ from telegram import Update
 from telegram.ext import CommandHandler, MessageHandler
 
 from message_storage import Message
-from openai_utils import SummaryGenerationError
+from summarization import SummaryGenerationError
 from telegram_bot import (
     format_message_for_openai, get_handlers, summary_handler, gist_handler, help_handler,
     listen_for_messages_handler, whisper_gist_handler, start_handler, get_admin_handlers,

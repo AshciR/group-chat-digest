@@ -19,7 +19,7 @@ from message_storage import (get_redis_client,
                              get_latest_n_messages,
                              DEFAULT_MESSAGE_STORAGE, configure_message_storage, MAX_MESSAGE_STORAGE,
                              get_all_chat_ids, get_commands_analytics, update_command_analytics)
-from openai_utils import get_ai_client, summarize_messages_as_bullet_points, summarize_messages_as_paragraph, \
+from summarization import get_ai_client, summarize_messages_as_bullet_points, summarize_messages_as_paragraph, \
     ping_openai, LLM_MODEL, convert_to_speech, SummaryGenerationError
 from utils import remove_voice_message
 from white_list import is_whitelisted, is_admin, get_admin_user_list
